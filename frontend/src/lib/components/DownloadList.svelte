@@ -1,7 +1,7 @@
 <script lang="ts">
-    import type { DownloadInfo, DownloadStatus } from '$lib/types';
+    import type { DownloadInfo, DownloadStatus } from '#lib/types.ts';
     import DownloadItem from './DownloadItem.svelte';
-    import { STATUS_LABELS } from '$lib/types';
+    import { STATUS_LABELS } from '#lib/types.ts';
     
     export let downloads: DownloadInfo[] = [];
     export let onCancel: (id: string) => void;

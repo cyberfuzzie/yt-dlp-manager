@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { DownloadRequest } from '$lib/types';
+    import type { DownloadRequest } from '#lib/types.ts';
     import { onMount } from 'svelte';
     
     export let onSubmit: (requests: DownloadRequest[]) => void;

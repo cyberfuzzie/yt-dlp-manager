@@ -1,6 +1,6 @@
 <script lang="ts">
-    import type { DownloadStatus } from '$lib/types';
-    import { STATUS_LABELS, STATUS_COLORS } from '$lib/types';
+    import type { DownloadStatus } from '#lib/types.ts';
+    import { STATUS_LABELS, STATUS_COLORS } from '#lib/types.ts';
     
     export let status: DownloadStatus = 'PENDING';
     export let showLabel = true;
