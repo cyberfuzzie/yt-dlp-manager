@@ -1,9 +1,9 @@
 <script lang="ts">
     import { onMount, onDestroy } from 'svelte';
-    import DownloadForm from '$lib/components/DownloadForm.svelte';
-    import DownloadList from '$lib/components/DownloadList.svelte';
-    import { api, createWebSocket } from '$lib/api';
-    import type { DownloadInfo, DownloadRequest, ConfigResponse } from '$lib/types';
+    import DownloadForm from '#lib/components/DownloadForm.svelte';
+    import DownloadList from '#lib/components/DownloadList.svelte';
+    import { api, createWebSocket } from '#lib/api.ts';
+    import type { DownloadInfo, DownloadRequest, ConfigResponse } from '#lib/types.ts';
     
     let downloads: DownloadInfo[] = [];
     let baseDirectory = '';

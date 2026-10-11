@@ -1,8 +1,8 @@
 <script lang="ts">
-    import type { DownloadInfo } from '$lib/types';
+    import type { DownloadInfo } from '#lib/types.ts';
     import StatusBadge from './StatusBadge.svelte';
-    import { formatRelativeTime, formatBytes, truncate, extractDomain } from '$lib/utils';
-    import { api } from '$lib/api';
+    import { formatRelativeTime, formatBytes, truncate, extractDomain } from '#lib/utils.ts';
+    import { api } from '#lib/api.ts';
     
     export let download!: DownloadInfo;
     export let onCancel: (id: string) => void;
