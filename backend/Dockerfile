@@ -6,7 +6,8 @@ COPY gradle ./gradle
 RUN ./gradlew dependencies --no-daemon
 
 COPY src ./src
-RUN ./gradlew installDist --no-daemon
+# `check` runs the test suite and enforces the 80% JaCoCo line-coverage gate.
+RUN ./gradlew check installDist --no-daemon
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
