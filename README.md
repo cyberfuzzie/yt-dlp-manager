@@ -17,14 +17,15 @@ A video download manager (YouTube, Twitch, etc.) with a **Kotlin/Ktor backend** 
 - **Java 21+** (backend)
 - **Node.js 20+** (frontend)
 - **pnpm** (frontend package manager)
-- **yt-dlp** must be installed system-wide and available in `PATH`
+- **yt-dlp** must be installed system-wide and available in `PATH` for local development. The backend
+  Docker image already bundles it (see [Docker deployment](#docker-deployment)).
 
 ```bash
-# install yt-dlp (Linux/macOS)
-pip install yt-dlp
+# install yt-dlp with uv (do not use pip/pipx)
+uv tool install yt-dlp
 # or
 brew install yt-dlp
-# or
+# or (standalone binary)
 sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && sudo chmod +x /usr/local/bin/yt-dlp
 ```
 
@@ -98,6 +99,9 @@ docker compose up -d --build
 
 Frontend: `http://localhost:3000`
 Backend API: `http://localhost:8080`
+
+The backend image bundles `yt-dlp`, installed in an isolated [uv](https://docs.astral.sh/uv/) tool
+environment. `pip`/`pipx` are never used and are not installed in the image.
 
 ## Project structure
 
