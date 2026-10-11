@@ -21,6 +21,7 @@ COPY --from=ghcr.io/astral-sh/uv:0.13.0-alpine /usr/local/bin/uv /usr/local/bin/
 RUN apk add --no-cache curl python3 \
     && UV_TOOL_BIN_DIR=/usr/local/bin uv tool install --python /usr/bin/python3 yt-dlp \
     && rm -rf /root/.cache/uv \
+    && mkdir -p /downloads \
     && yt-dlp --version
 
 COPY --from=builder /app/build/install/yt-dlp-manager-backend /app
