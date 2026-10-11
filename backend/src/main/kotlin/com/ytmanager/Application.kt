@@ -19,7 +19,9 @@ import kotlinx.coroutines.channels.Channel
 
 fun Application.module() {
     val config = environment.config
-    val baseDirectory = config.property("app.download.base-directory").getString()
+    val baseDirectory = System.getenv("APP_DOWNLOAD_BASE_DIRECTORY")
+        ?: config.propertyOrNull("app.download.base-directory")?.getString()
+        ?: "/downloads"
 
     val json = appJson()
 
