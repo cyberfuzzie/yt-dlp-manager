@@ -54,8 +54,13 @@ pnpm install           # on first run, approve build scripts: pnpm approve-build
 pnpm run dev           # dev server on http://localhost:5173, proxies /api -> :8080
 pnpm run build         # static build into frontend/build (adapter-static)
 pnpm run check         # svelte-check type checking
+pnpm run test          # run the unit/component test suite
+pnpm run test:coverage # run tests and enforce the 80% coverage gate
 ```
 - pnpm only (the lockfile is `frontend/pnpm-lock.yaml`).
+- Tests use Vitest (`frontend/vitest.config.ts`) with the jsdom environment and `@testing-library/svelte`. Specs live in `frontend/test/`, mirror the `src/` layout, and import through the `#lib/*` subpath alias.
+- Every test script runs `svelte-kit sync` first, which generates the `$app` TS shim that `tsconfig.json` extends. Without it, Vitest's dependency optimizer fails to resolve Node builtins.
+- Coverage is enforced with the V8 provider: `test:coverage` fails when lines, branches, functions, or statements drop below 80%. Reports are written to `frontend/coverage/`. `frontend/Dockerfile` runs `pnpm run test:coverage` before `vite build`, so CI enforces the gate.
 - Production serving uses `@sveltejs/adapter-static` behind nginx (`frontend/nginx.conf`), which proxies `/api` and `/api/ws` to the backend.
 
 ### Docker
@@ -78,6 +83,7 @@ docker compose up -d --build
 - Image names: `ghcr.io/cyberfuzzie/yt-dlp-manager-frontend` and `ghcr.io/cyberfuzzie/yt-dlp-manager-backend` (lowercase).
 - Tagging: branch pushes are tagged with the commit SHA (`github.sha`); tag pushes are tagged with the tag name (`github.ref_name`).
 - PR builds are build-only (nothing is pushed to the registry).
+- Each image build runs its own test/coverage gate: the backend Dockerfile runs `./gradlew check` (JaCoCo, 80% lines) and the frontend Dockerfile runs `pnpm run test:coverage` (Vitest, 80% lines/branches/functions/statements).
 
 ## Dependabot
 
@@ -86,6 +92,6 @@ docker compose up -d --build
 ## When making changes
 
 1. Keep documentation and comments in English.
-2. Run `pnpm run check` after frontend changes; run `./gradlew build` after backend changes.
+2. Run `pnpm run check` and `pnpm run test` after frontend changes; run `./gradlew build` after backend changes.
 3. Do not add a root `package.json`, pnpm workspace, or persistence layer unless explicitly requested.
 4. Commit messages: concise, imperative, English (e.g. "Add WebSocket reconnect handling").
