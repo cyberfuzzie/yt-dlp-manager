@@ -17,7 +17,8 @@ env:
   IMAGE_NAME: ${{ github.repository }}-frontend
 
 jobs:
-  build-and-push:
+  build-and-push-frontend:
+    name: Build and push frontend image
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
