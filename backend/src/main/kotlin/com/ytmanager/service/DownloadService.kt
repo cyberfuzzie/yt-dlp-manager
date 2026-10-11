@@ -15,6 +15,7 @@ import java.util.concurrent.ConcurrentHashMap
 class DownloadService(
     private val baseDirectory: String,
     val updateChannel: Channel<DownloadInfo>,
+    private val ytDlpExecutable: String = "yt-dlp",
 ) {
     private val downloads = ConcurrentHashMap<String, DownloadInfo>()
     private val mutex = Mutex()
@@ -130,7 +131,7 @@ class DownloadService(
     }
 
     private fun buildYtDlpCommand(download: DownloadInfo, targetDir: File): List<String> {
-        val command = mutableListOf<String>("yt-dlp")
+        val command = mutableListOf<String>(ytDlpExecutable)
         
         command.add("--no-playlist")
         command.add("--restrict-filenames")

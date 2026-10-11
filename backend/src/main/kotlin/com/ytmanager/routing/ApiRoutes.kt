@@ -1,5 +1,6 @@
 package com.ytmanager.routing
 
+import com.ytmanager.appJson
 import com.ytmanager.model.DownloadInfo
 import com.ytmanager.model.DownloadRequest
 import com.ytmanager.model.DownloadResponse
@@ -20,7 +21,6 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
 
 fun Route.apiRoutes(downloadService: DownloadService) {
     route("/api") {
@@ -64,7 +64,7 @@ fun Route.apiRoutes(downloadService: DownloadService) {
         }
         
         webSocket("/ws") {
-            val json = Json { prettyPrint = true }
+            val json = appJson()
             
             val sendChannel = Channel<DownloadInfo>(Channel.UNLIMITED)
             

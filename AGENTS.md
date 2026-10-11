@@ -38,8 +38,12 @@ Note: there is intentionally **no root `package.json`**. The frontend is a stand
 cd backend
 ./gradlew run          # dev server on http://localhost:8080
 ./gradlew build        # assemble JAR/distribution
+./gradlew test         # run the test suite
 ```
 - Java 21 toolchain (see `backend/build.gradle.kts`).
+- Tests live in `backend/src/test/kotlin`, mirroring the main package layout.
+- Coverage is enforced with JaCoCo: `check` (and therefore `build`) fails when line coverage
+  drops below 80%. Reports are written to `backend/build/reports/jacoco/test/`.
 - Base download directory: `backend/src/main/resources/application.conf` (`app.download.base-directory`), overridable with `APP_DOWNLOAD_BASE_DIRECTORY`.
 - `yt-dlp` must be installed and on `PATH` for downloads to work.
 

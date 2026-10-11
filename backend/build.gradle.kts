@@ -5,6 +5,7 @@ plugins {
     kotlin("jvm") version "2.4.21"
     kotlin("plugin.serialization") version "2.4.21"
     application
+    jacoco
 }
 
 group = "com.ytmanager"
@@ -55,4 +56,30 @@ tasks.withType<KotlinCompile> {
 
 tasks.named<Test>("test") {
     useJUnitPlatform()
+}
+
+// Ensure the tests are run before measuring coverage.
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+}
+
+// Fail the build if line coverage drops below 80%.
+tasks.jacocoTestCoverageVerification {
+    dependsOn(tasks.test)
+    violationRules {
+        rule {
+            limit {
+                counter = "LINE"
+                minimum = "0.80".toBigDecimal()
+            }
+        }
+    }
+}
+
+tasks.named("check") {
+    dependsOn(tasks.jacocoTestReport, tasks.jacocoTestCoverageVerification)
 }

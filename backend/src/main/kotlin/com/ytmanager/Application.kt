@@ -16,32 +16,13 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.channels.Channel
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.modules.SerializersModule
-import java.time.Instant
 
 fun Application.module() {
     val config = environment.config
     val baseDirectory = config.property("app.download.base-directory").getString()
-    
-    val serializersModule = SerializersModule {
-        contextual(Instant::class, object : kotlinx.serialization.KSerializer<Instant> {
-            override val descriptor = kotlinx.serialization.descriptors.PrimitiveSerialDescriptor("Instant", kotlinx.serialization.descriptors.PrimitiveKind.STRING)
-            override fun serialize(encoder: kotlinx.serialization.encoding.Encoder, value: Instant) {
-                encoder.encodeString(value.toString())
-            }
-            override fun deserialize(decoder: kotlinx.serialization.encoding.Decoder): Instant {
-                return Instant.parse(decoder.decodeString())
-            }
-        })
-    }
-    
-    val json = Json {
-        prettyPrint = true
-        ignoreUnknownKeys = true
-        this.serializersModule = serializersModule
-    }
-    
+
+    val json = appJson()
+
     install(CallId)
     install(CallLogging)
     install(WebSockets)
