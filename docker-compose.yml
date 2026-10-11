@@ -6,8 +6,8 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ${DOWNLOAD_BASE_DIR:-/home/cyberfuzzie/Downloads/yt-dlp-manager}:/downloads
-      - ./backend/src/main/resources/application.conf:/app/application.conf:ro
+      - ${DOWNLOAD_BASE_DIR:-/home/cyberfuzzie/Downloads/yt-dlp-manager}:/downloads:z
+      - ./backend/src/main/resources/application.conf:/app/application.conf:ro,z
     environment:
       - APP_DOWNLOAD_BASE_DIRECTORY=/downloads
     restart: unless-stopped
