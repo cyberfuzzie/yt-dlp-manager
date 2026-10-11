@@ -3,13 +3,15 @@
     import StatusBadge from './StatusBadge.svelte';
     import { formatRelativeTime, formatBytes, truncate, extractDomain } from '#lib/utils.ts';
     import { api } from '#lib/api.ts';
-    import { getLocale, t } from '#lib/i18n.ts';
+    import { locale, getLocale, t } from '#lib/i18n.ts';
     
     export let download!: DownloadInfo;
     export let onCancel: (id: string) => void;
     
     let showDetails = false;
     let isCancelling = false;
+    
+    $: _ = $locale;
     
     function handleCancel() {
         if (isCancelling) return;

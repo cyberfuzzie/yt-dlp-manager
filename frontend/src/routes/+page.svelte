@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { t } from '#lib/i18n.ts';
+    import { locale, t } from '#lib/i18n.ts';
     import { onMount, onDestroy } from 'svelte';
     import DownloadForm from '#lib/components/DownloadForm.svelte';
     import DownloadList from '#lib/components/DownloadList.svelte';
@@ -12,6 +12,9 @@
     let isLoading = false;
     let ws: WebSocket | null = null;
     let connectionStatus: 'connecting' | 'connected' | 'disconnected' = 'connecting';
+    
+    // Subscribe to locale changes for reactive translations
+    $: _ = $locale;
     
     // Reactive translations
     $: connectionLabel = connectionStatus === 'connected' ? t('connection.connected')

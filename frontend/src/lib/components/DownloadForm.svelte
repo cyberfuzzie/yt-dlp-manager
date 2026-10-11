@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { DownloadRequest } from '#lib/types.ts';
     import { onMount } from 'svelte';
-    import { t } from '#lib/i18n.ts';
+    import { locale, t } from '#lib/i18n.ts';
     
     export let onSubmit: (requests: DownloadRequest[]) => void;
     export let isLoading = false;
@@ -13,6 +13,8 @@
     let quality = '';
     let showAdvanced = false;
     let urlErrors: string[] = [];
+    
+    $: _ = $locale;
     
     $: formTitle = t('form.title');
     $: urlsLabel = t('form.urls.label');

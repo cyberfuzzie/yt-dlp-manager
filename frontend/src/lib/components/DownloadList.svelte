@@ -2,11 +2,14 @@
     import type { DownloadInfo, DownloadStatus } from '#lib/types.ts';
     import { STATUS_KEYS, STATUS_LABELS } from '#lib/types.ts';
     import DownloadItem from './DownloadItem.svelte';
-    import { t, getLocale } from '#lib/i18n.ts';
+    import { locale, t, getLocale } from '#lib/i18n.ts';
     import { getStatusLabels } from '#lib/i18n/translations.ts';
     
     export let downloads: DownloadInfo[] = [];
     export let onCancel: (id: string) => void;
+    
+    // Subscribe to locale changes for reactive translations
+    $: _ = $locale;
     
     $: statusLabels = getStatusLabels(getLocale());
     
