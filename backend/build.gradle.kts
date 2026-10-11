@@ -35,7 +35,7 @@ dependencies {
     implementation("io.ktor:ktor-server-cors:2.3.11")
     implementation("ch.qos.logback:logback-classic:1.6.5")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
     implementation("commons-io:commons-io:2.22.0")
     testImplementation("io.ktor:ktor-server-test-host:2.3.11")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5:2.4.21")
