@@ -1,0 +1,42 @@
+# Gradle
+.gradle
+build/
+backend/build/
+backend/.gradle/
+
+# Node
+node_modules/
+frontend/node_modules/
+frontend/build/
+frontend/.svelte-kit/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Docker
+docker-compose.override.yml
+
+# Downloads (should not be tracked in the repo)
+/downloads/
+*.mp4
+*.mkv
+*.webm
+*.mp3
+*.m4a

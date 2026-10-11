@@ -1,0 +1,1 @@
+rootProject.name = "yt-dlp-manager-backend"
