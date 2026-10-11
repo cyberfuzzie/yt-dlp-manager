@@ -71,9 +71,9 @@
         <div class="progress-container">
             <div 
                 class="progress-bar" 
-                style="width: {download.progress}%; background: {getProgressColor()};"
+                style="width: {(download.progress ?? 0)}%; background: {getProgressColor()};"
             ></div>
-            <span class="progress-text">{download.progress.toFixed(1)}%</span>
+            <span class="progress-text">{(download.progress ?? 0).toFixed(1)}%</span>
         </div>
         <div class="progress-meta">
             {#if download.speed}
