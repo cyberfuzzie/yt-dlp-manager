@@ -4,6 +4,7 @@ import Page from '../src/routes/+page.svelte';
 import { api, createWebSocket } from '#lib/api.ts';
 import type { DownloadInfo } from '#lib/types.ts';
 import { makeDownload } from './helpers';
+import { setLocale } from '#lib/i18n';
 
 // Mock the API client so the page never performs real network calls.
 vi.mock('#lib/api.ts', () => ({
@@ -34,6 +35,7 @@ let currentWs: FakeWebSocket;
 let onDownloadMessage: ((download: DownloadInfo) => void) | null = null;
 
 beforeEach(() => {
+	setLocale('de');
 	currentWs = new FakeWebSocket();
 	onDownloadMessage = null;
 	createWebSocketMock.mockReset();

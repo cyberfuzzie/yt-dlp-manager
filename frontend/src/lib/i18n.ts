@@ -40,24 +40,62 @@ export function setLocale(value: Locale): void {
     } catch {
         // localStorage may be unavailable
     }
+    updateHtmlLang(value);
 }
 
 /** Read the persisted locale from localStorage, falling back to the default. */
-function readPersistedLocale(): Locale {
+function readPersistedLocale(): Locale | null {
     try {
         const saved = localStorage.getItem('yt-dlp-lang');
         if (saved === 'de' || saved === 'en') return saved;
     } catch {
         // ignore
     }
+    return null;
+}
+
+/** Detect the user's preferred locale from the browser. */
+function detectBrowserLocale(): Locale {
+    try {
+        if (typeof navigator !== 'undefined') {
+            const browserLang = navigator.language.toLowerCase();
+            if (browserLang.startsWith('de')) return 'de';
+            if (browserLang.startsWith('en')) return 'en';
+        }
+    } catch {
+        // navigator may not be available (SSR)
+    }
     return defaultLocale;
 }
 
+/** Update the <html> lang attribute to match the given locale. */
+function updateHtmlLang(value: Locale): void {
+    try {
+        if (typeof document !== 'undefined') {
+            document.documentElement.lang = value;
+            document.documentElement.dataset.lang = value;
+        }
+    } catch {
+        // document may not be available (SSR)
+    }
+}
+
 /**
- * Initialize the locale store from localStorage.
- * Call this early (e.g. in the root layout) so the store has the right value before first render.
+ * Initialize the locale store from localStorage or browser detection.
+ * Call this early (e.g. in onMount of the root layout) so the store
+ * has the right value before first render.
  */
 export function initLocale(): void {
+    // 1. Check persisted user choice first
     const persisted = readPersistedLocale();
-    locale.set(persisted);
+    if (persisted) {
+        locale.set(persisted);
+        updateHtmlLang(persisted);
+        return;
+    }
+
+    // 2. Detect from browser language
+    const detected = detectBrowserLocale();
+    locale.set(detected);
+    updateHtmlLang(detected);
 }

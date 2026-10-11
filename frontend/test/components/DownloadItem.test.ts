@@ -20,6 +20,7 @@ function renderItem(download: DownloadInfo = makeDownload(), onCancel: (id: stri
 
 describe('DownloadItem', () => {
 	beforeEach(() => {
+		setLocale('de');
 		vi.useFakeTimers();
 		vi.setSystemTime(new Date('2026-01-01T12:00:00Z'));
 	});

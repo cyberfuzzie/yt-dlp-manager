@@ -2,7 +2,13 @@ import type { Locale } from '#lib/i18n.ts';
 
 export const availableLocales: Locale[] = ['de', 'en'];
 
-export const defaultLocale: Locale = 'de';
+export const defaultLocale: Locale = 'en';
+
+/** Language display names in their native language (locale-independent). */
+export const localeNames: Record<Locale, string> = {
+    de: 'Deutsch',
+    en: 'English',
+};
 
 const de: Record<string, string> = {
     // Header

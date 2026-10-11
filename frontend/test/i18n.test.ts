@@ -1,13 +1,13 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, vi, afterEach } from 'vitest';
 import { writable } from 'svelte/store';
 import { getLocale, setLocale, subscribe, t, type Locale } from '#lib/i18n.ts';
-import { availableLocales, defaultLocale, getStatusLabels, translations } from '#lib/i18n/translations.ts';
+import { availableLocales, defaultLocale, getStatusLabels, localeNames, translations } from '#lib/i18n/translations.ts';
 
 describe('locale store', () => {
 	beforeEach(() => setLocale('de'));
 
-	it('defaults to German', () => {
-		expect(defaultLocale).toBe('de');
+	it('defaults to English', () => {
+		expect(defaultLocale).toBe('en');
 	});
 
 	it('recognizes available locales', () => {
@@ -31,6 +31,21 @@ describe('locale store', () => {
 	it('setLocale rejects invalid values without throwing', () => {
 		// @ts-expect-error invalid type
 		expect(() => setLocale('fr')).not.toThrow();
+	});
+});
+
+describe('localeNames', () => {
+	beforeEach(() => setLocale('de'));
+
+	it('shows languages in their native names', () => {
+		expect(localeNames.de).toBe('Deutsch');
+		expect(localeNames.en).toBe('English');
+	});
+
+	it('is locale-independent (always native names)', () => {
+		setLocale('en');
+		expect(localeNames.de).toBe('Deutsch');
+		expect(localeNames.en).toBe('English');
 	});
 });
 
@@ -152,5 +167,42 @@ describe('translations completeness', () => {
 		expect(labels.COMPLETED).toBe('Completed');
 		expect(labels.FAILED).toBe('Failed');
 		expect(labels.CANCELLED).toBe('Cancelled');
+	});
+});
+
+describe('initLocale', () => {
+	afterEach(() => {
+		setLocale('de');
+		vi.restoreAllMocks();
+	});
+
+	it('uses persisted locale from localStorage', async () => {
+		const mock = vi.fn((key: string) => (key === 'yt-dlp-lang' ? 'en' : null));
+		vi.spyOn(Storage.prototype, 'getItem').mockImplementation(mock);
+
+		const { initLocale } = await import('#lib/i18n.ts');
+		initLocale();
+
+		expect(mock).toHaveBeenCalledWith('yt-dlp-lang');
+		expect(getLocale()).toBe('en');
+	});
+
+	it('detects browser language when no localStorage entry', async () => {
+		vi.spyOn(Storage.prototype, 'getItem').mockReturnValue(null);
+
+		const { initLocale } = await import('#lib/i18n.ts');
+		initLocale();
+
+		expect(getLocale()).toBe('en');
+	});
+
+	it('falls back to English for unknown browser language', async () => {
+		vi.spyOn(Storage.prototype, 'getItem').mockReturnValue(null);
+		vi.spyOn(Object.getPrototypeOf(navigator), 'language', 'get').mockReturnValue('fr-FR');
+
+		const { initLocale } = await import('#lib/i18n.ts');
+		initLocale();
+
+		expect(getLocale()).toBe('en');
 	});
 });

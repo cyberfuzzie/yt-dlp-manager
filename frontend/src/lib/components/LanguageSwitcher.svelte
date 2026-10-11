@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { locale, setLocale, t, availableLocales } from '#lib/i18n.ts';
+    import { locale, setLocale, availableLocales } from '#lib/i18n.ts';
+    import { localeNames } from '#lib/i18n/translations.ts';
 
     function handleSelect(event: Event) {
         const select = event.target as HTMLSelectElement;
@@ -11,10 +12,10 @@
     bind:value={$locale}
     on:change={handleSelect}
     class="lang-switcher"
-    aria-label={t('connection.indicator')}
+    aria-label="Language"
 >
-    {#each availableLocales as locale}
-        <option value={locale}>{t(`lang.${locale}`)}</option>
+    {#each availableLocales as loc}
+        <option value={loc}>{localeNames[loc]}</option>
     {/each}
 </select>
 
