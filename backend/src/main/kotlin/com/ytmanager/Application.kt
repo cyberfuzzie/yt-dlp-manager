@@ -6,14 +6,12 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.server.application.*
-import io.ktor.server.engine.embeddedServer
-import io.ktor.server.engine.commandLineEnvironment
 import io.ktor.server.plugins.contentnegotiation.*
-import io.ktor.server.plugins.callloging.*
+import io.ktor.server.plugins.calllogging.*
 import io.ktor.server.plugins.callid.*
-import io.ktor.server.plugins.cors.*
+import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.websocket.WebSockets
-import io.ktor.server.netty.Netty
+import io.ktor.server.netty.EngineMain
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.serialization.kotlinx.json.*
@@ -69,5 +67,5 @@ fun Application.module() {
 }
 
 fun main(args: Array<String>) {
-    embeddedServer(Netty, commandLineEnvironment(args)).start(wait = true)
+    EngineMain.main(args)
 }
