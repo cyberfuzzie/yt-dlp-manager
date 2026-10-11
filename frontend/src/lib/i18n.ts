@@ -1,26 +1,19 @@
-import { init, t, locale as nativeLocale, unwrapFunctionStore } from 'svelte-i18n';
+import { addMessages, init, t, locale as nativeLocale, unwrapFunctionStore } from 'svelte-i18n';
 import { writable } from 'svelte/store';
+import en from '../locales/en.json';
+import de from '../locales/de.json';
 
 export { t };
 
+// Pre-register message dictionaries for all supported locales.
+addMessages('en', en);
+addMessages('de', de);
+
+// Initialize svelte-i18n eagerly so createT() works before onMount.
+await init({ fallbackLocale: 'en', initialLocale: 'en' });
+
 /** Writable locale store – use Svelte's $ auto-subscription for reactivity. */
 export const locale = writable<string>('en');
-
-/** Initialize svelte-i18n and restore the persisted locale from localStorage. */
-export async function initLocale(): Promise<void> {
-    const persisted = typeof localStorage !== 'undefined' ? localStorage.getItem('yt-dlp-lang') : null;
-    const detectedLocale = detectLocale(persisted);
-    await init({
-        fallbackLocale: 'en',
-        initialLocale: detectedLocale,
-    });
-    // Sync the writable store with svelte-i18n's internal locale.
-    locale.set(detectedLocale);
-    // Keep the writable store in sync with svelte-i18n's locale changes.
-    locale.subscribe((l) => {
-        nativeLocale.set(l);
-    });
-}
 
 /** Detect locale from localStorage or browser, falling back to English. */
 function detectLocale(persisted: string | null): string {
@@ -71,4 +64,17 @@ export type Locale = typeof availableLocales[number];
 /** Subscribe to the current locale. */
 export function subscribe(run: (value: string) => void): () => void {
     return locale.subscribe(run);
+}
+
+/** Sync locale from localStorage and set document language attributes. */
+export function initLocale(): void {
+    const persisted = typeof localStorage !== 'undefined' ? localStorage.getItem('yt-dlp-lang') : null;
+    const detectedLocale = detectLocale(persisted);
+    // Only update if different — init() already set 'en' as the locale.
+    if (detectedLocale !== locale.value) {
+        nativeLocale.set(detectedLocale);
+        locale.set(detectedLocale);
+    }
+    document.documentElement.lang = detectedLocale;
+    document.documentElement.dataset.lang = detectedLocale;
 }
