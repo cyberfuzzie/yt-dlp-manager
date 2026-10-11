@@ -97,7 +97,7 @@ fun Route.apiRoutes(downloadService: DownloadService) {
                             is Frame.Text -> { /* Ignore */ }
                             is Frame.Binary -> { /* Ignore */ }
                             is Frame.Close -> {
-                                terminate()
+                                cancel()
                             }
                             is Frame.Ping -> { /* Auto-pong */ }
                             is Frame.Pong -> { /* Ignore */ }
