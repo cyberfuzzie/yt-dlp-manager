@@ -45,7 +45,10 @@ cd backend
 - Coverage is enforced with JaCoCo: `check` (and therefore `build`) fails when line coverage
   drops below 80%. Reports are written to `backend/build/reports/jacoco/test/`.
 - Base download directory: `backend/src/main/resources/application.conf` (`app.download.base-directory`), overridable with `APP_DOWNLOAD_BASE_DIRECTORY`.
-- `yt-dlp` must be installed and on `PATH` for downloads to work.
+- `yt-dlp` must be installed and on `PATH` for downloads to work. The backend Docker image bundles
+  it: `yt-dlp` is installed with [uv](https://docs.astral.sh/uv/) into an isolated tool environment
+  (Alpine's `python3`, which ships without `pip`). Never introduce `pip`/`pipx` — they are neither
+  used nor installed in the image.
 
 ### Frontend
 ```bash
