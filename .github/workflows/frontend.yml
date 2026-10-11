@@ -73,7 +73,7 @@ jobs:
 
       - name: Build and push frontend image
         if: steps.build.outputs.should_build == 'true'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./frontend
           push: ${{ github.event_name != 'pull_request' }}
