@@ -70,9 +70,10 @@ docker compose up -d --build
 ## CI/CD conventions
 
 - GitHub Actions builds Docker images and pushes them to GHCR.
-- Workflows are **path-filtered**: `frontend.yml` runs only when `frontend/**` (or its own workflow file) changes; `backend.yml` only when `backend/**` changes. Path filters are **not** evaluated for tag pushes, so a Git tag builds **both** images.
+- Workflows run on every push/PR to `main` and on tags, but **exit early (success) when no relevant files changed**. They build when `frontend/**` (or the workflow file itself) changes, or on a Git tag push — a tag always builds **both** images.
 - Image names: `ghcr.io/cyberfuzzie/yt-dlp-manager-frontend` and `ghcr.io/cyberfuzzie/yt-dlp-manager-backend` (lowercase).
 - Tagging: branch pushes are tagged with the commit SHA (`github.sha`); tag pushes are tagged with the tag name (`github.ref_name`).
+- PR builds are build-only (nothing is pushed to the registry).
 
 ## Dependabot
 
