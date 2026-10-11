@@ -39,6 +39,15 @@ export interface WebSocketMessage {
     payload: DownloadInfo;
 }
 
+/** Ordered list of all download status values. Use this for iteration instead of STATUS_LABELS. */
+export const STATUS_KEYS: readonly DownloadStatus[] = [
+    'PENDING',
+    'DOWNLOADING',
+    'COMPLETED',
+    'FAILED',
+    'CANCELLED',
+];
+
 export const STATUS_LABELS: Record<DownloadStatus, string> = {
     PENDING: 'Wartend',
     DOWNLOADING: 'Wird heruntergeladen',

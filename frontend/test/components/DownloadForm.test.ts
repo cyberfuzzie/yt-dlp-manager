@@ -1,10 +1,13 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DownloadForm from '#lib/components/DownloadForm.svelte';
+import { setLocale } from '#lib/i18n';
 
 const urlsLabel = 'Video-URLs * (eine pro Zeile)';
 
 describe('DownloadForm', () => {
+	beforeEach(() => setLocale('de'));
+
 	it('renders the form with the base directory prefix', () => {
 		render(DownloadForm, { props: { onSubmit: vi.fn(), baseDirectory: '/downloads' } });
 		expect(screen.getByLabelText(urlsLabel)).toBeInTheDocument();

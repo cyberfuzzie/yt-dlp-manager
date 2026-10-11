@@ -1,14 +1,17 @@
 <script lang="ts">
     import type { DownloadInfo, DownloadStatus } from '#lib/types.ts';
+    import { STATUS_KEYS, STATUS_LABELS } from '#lib/types.ts';
     import DownloadItem from './DownloadItem.svelte';
-    import { STATUS_LABELS } from '#lib/types.ts';
+    import { t, getLocale } from '#lib/i18n.ts';
+    import { getStatusLabels } from '#lib/i18n/translations.ts';
     
     export let downloads: DownloadInfo[] = [];
     export let onCancel: (id: string) => void;
     
-    const statusOrder: DownloadStatus[] = ['DOWNLOADING', 'PENDING', 'FAILED', 'COMPLETED', 'CANCELLED'];
+    $: statusLabels = getStatusLabels(getLocale());
     
     $: sortedDownloads = [...downloads].sort((a, b) => {
+        const statusOrder = ['DOWNLOADING', 'PENDING', 'FAILED', 'COMPLETED', 'CANCELLED'];
         const statusA = statusOrder.indexOf(a.status);
         const statusB = statusOrder.indexOf(b.status);
         if (statusA !== statusB) return statusA - statusB;
@@ -16,13 +19,13 @@
     });
     
     $: downloadsByStatus = Object.fromEntries(
-        Object.values(STATUS_LABELS).map(label => [label, sortedDownloads.filter(d => STATUS_LABELS[d.status] === label)])
+        STATUS_KEYS.map(status => [statusLabels[status], sortedDownloads.filter(d => d.status === status)])
     ) as Record<string, DownloadInfo[]>;
     
     function getStatusCounts(): Record<string, number> {
         const counts: Record<string, number> = {};
-        for (const status of Object.keys(STATUS_LABELS) as DownloadStatus[]) {
-            counts[STATUS_LABELS[status]] = downloads.filter(d => d.status === status).length;
+        for (const status of STATUS_KEYS) {
+            counts[statusLabels[status]] = downloads.filter(d => d.status === status).length;
         }
         return counts;
     }
@@ -30,7 +33,7 @@
     $: statusCounts = getStatusCounts();
     
     function getStatusColor(label: string): string {
-        const status = Object.entries(STATUS_LABELS).find(([, v]) => v === label)?.[0] as keyof typeof STATUS_LABELS;
+        const status = STATUS_KEYS.find(s => statusLabels[s] === label);
         const colors: Record<string, string> = {
             PENDING: '#fbbf24',
             DOWNLOADING: '#3b82f6',
@@ -38,8 +41,12 @@
             FAILED: '#ef4444',
             CANCELLED: '#6b7280',
         };
-        return colors[status] || '#6b7280';
+        return colors[status ?? ''] || '#6b7280';
     }
+    
+    $: headerTitle = t('list.header', downloads.length);
+    $: emptyTitle = t('list.empty.title');
+    $: emptyHint = t('list.empty.hint');
 </script>
 
 <div class="download-list">
@@ -48,12 +55,12 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="empty-icon">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M17 10l-5 5-5-5"/>
             </svg>
-            <p>Keine Downloads vorhanden</p>
-            <span>Füge oben einen neuen Download hinzu</span>
+            <p>{emptyTitle}</p>
+            <span>{emptyHint}</span>
         </div>
     {:else}
         <div class="list-header">
-            <h3>Downloads ({downloads.length})</h3>
+            <h3>{headerTitle}</h3>
             <div class="status-summary">
                 {#each Object.entries(statusCounts) as [label, count]}
                     {#if count > 0}

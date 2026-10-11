@@ -1,19 +1,24 @@
 <script lang="ts">
     import type { DownloadStatus } from '#lib/types.ts';
-    import { STATUS_LABELS, STATUS_COLORS } from '#lib/types.ts';
+    import { STATUS_COLORS } from '#lib/types.ts';
+    import { t, getLocale } from '#lib/i18n.ts';
+    import { getStatusLabels } from '#lib/i18n/translations.ts';
     
     export let status: DownloadStatus = 'PENDING';
     export let showLabel = true;
+    
+    $: statusLabels = getStatusLabels(getLocale());
+    $: label = statusLabels[status];
 </script>
 
 <span 
     class="status-badge" 
     style="--status-color: {STATUS_COLORS[status]}"
-    title={STATUS_LABELS[status]}
+    title={label}
 >
     <span class="status-dot"></span>
     {#if showLabel}
-        <span class="status-label">{STATUS_LABELS[status]}</span>
+        <span class="status-label">{label}</span>
     {/if}
 </span>
 

@@ -1,7 +1,9 @@
 <script lang="ts">
+    import { t } from '#lib/i18n.ts';
     import { onMount, onDestroy } from 'svelte';
     import DownloadForm from '#lib/components/DownloadForm.svelte';
     import DownloadList from '#lib/components/DownloadList.svelte';
+    import LanguageSwitcher from '#lib/components/LanguageSwitcher.svelte';
     import { api, createWebSocket } from '#lib/api.ts';
     import type { DownloadInfo, DownloadRequest, ConfigResponse } from '#lib/types.ts';
     
@@ -10,6 +12,11 @@
     let isLoading = false;
     let ws: WebSocket | null = null;
     let connectionStatus: 'connecting' | 'connected' | 'disconnected' = 'connecting';
+    
+    // Reactive translations
+    $: connectionLabel = connectionStatus === 'connected' ? t('connection.connected')
+        : connectionStatus === 'connecting' ? t('connection.connecting')
+        : t('connection.disconnected');
     
     async function loadConfig() {
         try {
@@ -37,7 +44,7 @@
             );
             // The WebSocket will update the list
         } catch (e) {
-            alert(`Fehler beim Hinzufügen: ${e instanceof Error ? e.message : 'Unbekannter Fehler'}`);
+            alert(`${t('error.add')}: ${e instanceof Error ? e.message : t('error.unknown')}`);
         } finally {
             isLoading = false;
         }
@@ -45,7 +52,7 @@
     
     function handleCancel(id: string) {
         api.cancelDownload(id).catch(e => {
-            alert(`Fehler beim Abbrechen: ${e instanceof Error ? e.message : 'Unbekannter Fehler'}`);
+            alert(`${t('error.cancel')}: ${e instanceof Error ? e.message : t('error.unknown')}`);
         });
     }
     
@@ -86,13 +93,14 @@
 <div class="app">
     <header class="header">
         <div class="header-content">
-            <h1>yt-dlp Manager</h1>
+            <h1>{t('app.title')}</h1>
             <div class="connection-indicator" class:connected={connectionStatus === 'connected'} class:disconnected={connectionStatus === 'disconnected'}>
                 <span class="dot"></span>
-                <span>{connectionStatus === 'connected' ? 'Verbunden' : connectionStatus === 'connecting' ? 'Verbinde...' : 'Getrennt'}</span>
+                <span>{connectionLabel}</span>
             </div>
+            <LanguageSwitcher />
         </div>
-        <p class="base-directory">Basis-Verzeichnis: <code>{baseDirectory}</code></p>
+        <p class="base-directory">{t('base.directory')}: <code>{baseDirectory}</code></p>
     </header>
     
     <main class="main">
@@ -129,6 +137,8 @@
         justify-content: space-between;
         align-items: center;
         margin-bottom: 0.5rem;
+        gap: 1rem;
+        flex-wrap: wrap;
     }
     
     .header h1 {

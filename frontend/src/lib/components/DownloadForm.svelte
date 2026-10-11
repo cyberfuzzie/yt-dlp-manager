@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { DownloadRequest } from '#lib/types.ts';
     import { onMount } from 'svelte';
+    import { t } from '#lib/i18n.ts';
     
     export let onSubmit: (requests: DownloadRequest[]) => void;
     export let isLoading = false;
@@ -12,6 +13,21 @@
     let quality = '';
     let showAdvanced = false;
     let urlErrors: string[] = [];
+    
+    $: formTitle = t('form.title');
+    $: urlsLabel = t('form.urls.label');
+    $: urlsPlaceholder = t('form.urls.placeholder');
+    $: directoryLabel = t('form.directory.label');
+    $: directoryPlaceholder = t('form.directory.placeholder');
+    $: directoryHint = t('form.directory.hint');
+    $: advancedText = showAdvanced ? t('form.advancedLess') : t('form.advanced');
+    $: submitText = isLoading ? t('form.submitting') : t('form.submit');
+    $: formatLabel = t('form.format.label');
+    $: formatPlaceholder = t('form.format.placeholder');
+    $: formatHint = t('form.format.hint');
+    $: qualityLabel = t('form.quality.label');
+    $: qualityPlaceholder = t('form.quality.placeholder');
+    $: qualityHint = t('form.quality.hint');
     
     function parseUrls(): string[] {
         return urls
@@ -25,7 +41,7 @@
         const urlList = parseUrls();
         
         if (urlList.length === 0) {
-            urlErrors.push('Mindestens eine URL ist erforderlich');
+            urlErrors.push(t('form.urls.required'));
             return false;
         }
         
@@ -33,7 +49,7 @@
             try {
                 new URL(url);
             } catch {
-                urlErrors.push(`Ungültige URL: ${url}`);
+                urlErrors.push(t('form.urls.invalid', url));
                 return false;
             }
         }
@@ -70,20 +86,20 @@
     function getUrlCount(): number {
         return parseUrls().length;
     }
+    
+    $: urlCountText = urls.trim() ? t('form.urls.urlCount', getUrlCount()) : '';
 </script>
 
 <div class="download-form-container">
-    <h2>Neue Downloads hinzufügen</h2>
+    <h2>{formTitle}</h2>
     
     <form on:submit={handleSubmit} class="download-form">
         <div class="form-group">
-            <label for="urls">Video-URLs * (eine pro Zeile)</label>
+            <label for="urls">{urlsLabel}</label>
             <textarea
                 id="urls"
                 bind:value={urls}
-                placeholder="https://youtube.com/watch?v=...
-https://twitch.tv/...
-https://youtube.com/watch?v=..."
+                placeholder={urlsPlaceholder}
                 on:paste={handlePaste}
                 class:invalid={urlErrors.length > 0}
                 disabled={isLoading}
@@ -91,7 +107,7 @@ https://youtube.com/watch?v=..."
                 rows={4}
             ></textarea>
             {#if urls.trim()}
-                <span class="url-count">{getUrlCount()} URL{getUrlCount() !== 1 ? 's' : ''} erkannt</span>
+                <span class="url-count">{urlCountText}</span>
             {/if}
             {#if urlErrors.length > 0}
                 {#each urlErrors as error}
@@ -102,57 +118,57 @@ https://youtube.com/watch?v=..."
         
         <div class="form-row">
             <div class="form-group">
-                <label for="targetDirectory">Zielverzeichnis (relativ, für alle)</label>
+                <label for="targetDirectory">{directoryLabel}</label>
                 <div class="input-with-prefix">
                     <span class="prefix">{baseDirectory}/</span>
                     <input
                         id="targetDirectory"
                         type="text"
                         bind:value={targetDirectory}
-                        placeholder="z.B. youtube/tutorials"
+                        placeholder={directoryPlaceholder}
                         disabled={isLoading}
                     />
                 </div>
-                <span class="hint">Leer lassen für Basis-Verzeichnis</span>
+                <span class="hint">{directoryHint}</span>
             </div>
         </div>
         
         <button type="button" class="toggle-advanced" on:click={() => showAdvanced = !showAdvanced}>
-            {showAdvanced ? 'Weniger Optionen' : 'Erweiterte Optionen'}
+            {advancedText}
         </button>
         
         {#if showAdvanced}
             <div class="advanced-options">
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="format">Format</label>
+                        <label for="format">{formatLabel}</label>
                         <input
                             id="format"
                             type="text"
                             bind:value={format}
-                            placeholder="z.B. bestvideo+bestaudio/best"
+                            placeholder={formatPlaceholder}
                             disabled={isLoading}
                         />
-                        <span class="hint">yt-dlp Format-Selektor</span>
+                        <span class="hint">{formatHint}</span>
                     </div>
                     
                     <div class="form-group">
-                        <label for="quality">Max. Qualität</label>
+                        <label for="quality">{qualityLabel}</label>
                         <input
                             id="quality"
                             type="text"
                             bind:value={quality}
-                            placeholder="z.B. 1080, 720, 480"
+                            placeholder={qualityPlaceholder}
                             disabled={isLoading}
                         />
-                        <span class="hint">Maximale Höhe in Pixeln</span>
+                        <span class="hint">{qualityHint}</span>
                     </div>
                 </div>
             </div>
         {/if}
         
         <button type="submit" class="btn-primary" disabled={isLoading || urls.trim() === ''}>
-            {isLoading ? 'Wird hinzugefügt...' : 'Downloads starten'}
+            {submitText}
         </button>
     </form>
 </div>

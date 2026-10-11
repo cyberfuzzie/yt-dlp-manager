@@ -3,6 +3,7 @@
     import StatusBadge from './StatusBadge.svelte';
     import { formatRelativeTime, formatBytes, truncate, extractDomain } from '#lib/utils.ts';
     import { api } from '#lib/api.ts';
+    import { getLocale, t } from '#lib/i18n.ts';
     
     export let download!: DownloadInfo;
     export let onCancel: (id: string) => void;
@@ -26,6 +27,19 @@
         if (download.status === 'CANCELLED') return '#6b7280';
         return '#3b82f6';
     }
+    
+    $: addedLabel = t('item.added');
+    $: detailsToggleLabel = t('item.detailsToggle', showDetails);
+    $: cancelLabel = t('item.cancel');
+    $: copyUrlLabel = t('item.copyUrl');
+    $: detailId = t('item.detail.id');
+    $: detailUrl = t('item.detail.url');
+    $: detailTargetDir = t('item.detail.targetDirectory');
+    $: detailFormat = t('item.detail.format');
+    $: detailQuality = t('item.detail.quality');
+    $: detailCreated = t('item.detail.created');
+    $: detailStarted = t('item.detail.started');
+    $: detailCompleted = t('item.detail.completed');
 </script>
 
 <article class="download-item" class:completed={download.status === 'COMPLETED'} class:failed={download.status === 'FAILED'}>
@@ -36,7 +50,7 @@
                 <span class="path">{truncate(download.url, 60)}</span>
             </div>
             <div class="item-meta">
-                <span class="created-at">Hinzugefügt: {formatRelativeTime(download.createdAt)}</span>
+                <span class="created-at">{addedLabel}: {formatRelativeTime(download.createdAt)}</span>
                 {#if download.targetDirectory}
                     <span class="target-dir">📁 {download.targetDirectory}</span>
                 {/if}
@@ -48,8 +62,8 @@
             <button 
                 class="btn-icon" 
                 on:click={() => showDetails = !showDetails}
-                aria-label={showDetails ? 'Details ausblenden' : 'Details anzeigen'}
-                title={showDetails ? 'Details ausblenden' : 'Details anzeigen'}
+                aria-label={detailsToggleLabel}
+                title={detailsToggleLabel}
             >
                 {showDetails ? '▲' : '▼'}
             </button>
@@ -58,8 +72,8 @@
                     class="btn-icon btn-danger" 
                     on:click={handleCancel}
                     disabled={isCancelling}
-                    aria-label="Download abbrechen"
-                    title="Download abbrechen"
+                    aria-label={cancelLabel}
+                    title={cancelLabel}
                 >
                     ✕
                 </button>
@@ -94,52 +108,52 @@
         <div class="error-info">
             <span class="error-icon">⚠</span>
             <span class="error-text">{download.errorMessage}</span>
-            <button class="btn-copy" on:click={copyUrl} title="URL kopieren">📋</button>
+            <button class="btn-copy" on:click={copyUrl} title={copyUrlLabel}>📋</button>
         </div>
     {/if}
     
     {#if showDetails}
         <div class="details-panel">
             <div class="detail-row">
-                <span class="detail-label">ID:</span>
+                <span class="detail-label">{detailId}:</span>
                 <span class="detail-value mono">{download.id}</span>
             </div>
             <div class="detail-row">
-                <span class="detail-label">URL:</span>
+                <span class="detail-label">{detailUrl}:</span>
                 <span class="detail-value url" title={download.url}>{download.url}</span>
             </div>
             {#if download.targetDirectory}
                 <div class="detail-row">
-                    <span class="detail-label">Zielverzeichnis:</span>
+                    <span class="detail-label">{detailTargetDir}:</span>
                     <span class="detail-value">{download.targetDirectory}</span>
                 </div>
             {/if}
             {#if download.format}
                 <div class="detail-row">
-                    <span class="detail-label">Format:</span>
+                    <span class="detail-label">{detailFormat}:</span>
                     <span class="detail-value mono">{download.format}</span>
                 </div>
             {/if}
             {#if download.quality}
                 <div class="detail-row">
-                    <span class="detail-label">Qualität:</span>
+                    <span class="detail-label">{detailQuality}:</span>
                     <span class="detail-value mono">{download.quality}</span>
                 </div>
             {/if}
             <div class="detail-row">
-                <span class="detail-label">Erstellt:</span>
-                <span class="detail-value">{new Date(download.createdAt).toLocaleString('de-DE')}</span>
+                <span class="detail-label">{detailCreated}:</span>
+                <span class="detail-value">{new Date(download.createdAt).toLocaleString(getLocale() === 'en' ? 'en-US' : 'de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
             </div>
             {#if download.startedAt}
                 <div class="detail-row">
-                    <span class="detail-label">Gestartet:</span>
-                    <span class="detail-value">{new Date(download.startedAt).toLocaleString('de-DE')}</span>
+                    <span class="detail-label">{detailStarted}:</span>
+                    <span class="detail-value">{new Date(download.startedAt).toLocaleString(getLocale() === 'en' ? 'en-US' : 'de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
             {/if}
             {#if download.completedAt}
                 <div class="detail-row">
-                    <span class="detail-label">Beendet:</span>
-                    <span class="detail-value">{new Date(download.completedAt).toLocaleString('de-DE')}</span>
+                    <span class="detail-label">{detailCompleted}:</span>
+                    <span class="detail-value">{new Date(download.completedAt).toLocaleString(getLocale() === 'en' ? 'en-US' : 'de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
             {/if}
         </div>
