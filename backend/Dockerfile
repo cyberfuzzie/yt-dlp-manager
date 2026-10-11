@@ -18,7 +18,7 @@ COPY --from=ghcr.io/astral-sh/uv:0.13.0-alpine /usr/local/bin/uv /usr/local/bin/
 
 # python3 comes from Alpine without pip (pip is a separate `py3-pip` package). uv creates its own
 # virtualenv for yt-dlp, so the system interpreter is used read-only and stays pip-free.
-RUN apk add --no-cache curl python3 \
+RUN apk add --no-cache curl python3 ffmpeg \
     && UV_TOOL_BIN_DIR=/usr/local/bin uv tool install --python /usr/bin/python3 yt-dlp \
     && rm -rf /root/.cache/uv \
     && mkdir -p /downloads \
