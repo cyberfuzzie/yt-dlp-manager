@@ -20,6 +20,15 @@ updates:
     commit-message:
       prefix: "chore"
       include: "scope"
+    # All Ktor modules must share the exact same version. Dependabot
+    # otherwise opens one PR per module, which would mix incompatible
+    # versions (e.g. ktor-server-core 3.6.0 with ktor-server-netty
+    # 2.3.11) and break the build. Group every io.ktor dependency into
+    # a single pull request so they are always bumped together.
+    groups:
+      ktor:
+        patterns:
+          - "io.ktor:*"
 
   # GitHub Actions workflow action versions.
   - package-ecosystem: "github-actions"
