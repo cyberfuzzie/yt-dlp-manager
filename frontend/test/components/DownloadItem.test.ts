@@ -95,6 +95,27 @@ describe('DownloadItem', () => {
 		expect(bar).toHaveStyle('width: 42.5%');
 	});
 
+	it('handles a DOWNLOADING download without a progress field', () => {
+		renderItem({
+			id: '080db9f7-ad4b-4a8b-847c-83994216a6a6',
+			url: 'https://www.youtube.com/watch?v=q5atySVMQDc',
+			targetDirectory: null,
+			format: null,
+			quality: null,
+			status: 'DOWNLOADING',
+			progress: undefined as unknown as number,
+			speed: null,
+			eta: null,
+			filename: null,
+			fileSize: null,
+			errorMessage: null,
+			createdAt: '2026-10-11T15:59:30.497333442Z',
+			startedAt: '2026-10-11T15:59:30.497757165Z',
+			completedAt: null,
+		});
+		expect(screen.getByText('0.0%')).toBeInTheDocument();
+	});
+
 	it('shows the filename and size for a completed download', () => {
 		renderItem(
 			makeDownload({
