@@ -25,19 +25,19 @@ repositories {
 }
 
 dependencies {
-    implementation("io.ktor:ktor-server-core:2.3.11")
-    implementation("io.ktor:ktor-server-netty:2.3.11")
-    implementation("io.ktor:ktor-server-content-negotiation:2.3.11")
-    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.11")
-    implementation("io.ktor:ktor-server-websockets:2.3.11")
-    implementation("io.ktor:ktor-server-call-logging:2.3.11")
-    implementation("io.ktor:ktor-server-call-id:2.3.11")
-    implementation("io.ktor:ktor-server-cors:2.3.11")
+    implementation("io.ktor:ktor-server-core:3.6.0")
+    implementation("io.ktor:ktor-server-netty:3.6.0")
+    implementation("io.ktor:ktor-server-content-negotiation:3.6.0")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:3.6.0")
+    implementation("io.ktor:ktor-server-websockets:3.6.0")
+    implementation("io.ktor:ktor-server-call-logging:3.6.0")
+    implementation("io.ktor:ktor-server-call-id:3.6.0")
+    implementation("io.ktor:ktor-server-cors:3.6.0")
     implementation("ch.qos.logback:logback-classic:1.6.5")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
     implementation("commons-io:commons-io:2.22.0")
-    testImplementation("io.ktor:ktor-server-test-host:2.3.11")
+    testImplementation("io.ktor:ktor-server-test-host:3.6.0")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5:2.4.21")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.3")
 }
