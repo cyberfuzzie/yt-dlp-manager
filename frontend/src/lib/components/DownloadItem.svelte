@@ -3,7 +3,7 @@
     import StatusBadge from './StatusBadge.svelte';
     import { formatRelativeTime, formatBytes, truncate, extractDomain } from '#lib/utils.ts';
     import { api } from '#lib/api.ts';
-    import { locale, getLocale, t } from '#lib/i18n.ts';
+    import { getLocale, unwrapT, createT } from '#lib/i18n.ts';
     
     export let download!: DownloadInfo;
     export let onCancel: (id: string) => void;
@@ -11,37 +11,43 @@
     let showDetails = false;
     let isCancelling = false;
     
-    $: _ = $locale;
+    const tFn = createT();
     
-    function handleCancel() {
+    async function handleCancel() {
         if (isCancelling) return;
         isCancelling = true;
-        onCancel(download.id);
+        try {
+            await onCancel(download.id);
+        } finally {
+            isCancelling = false;
+        }
+    }
+    
+    function getProgressColor(): string {
+        const p = download.progress ?? 0;
+        if (p < 30) return '#fbbf24';
+        if (p < 70) return '#3b82f6';
+        return '#22c55e';
     }
     
     function copyUrl() {
         navigator.clipboard.writeText(download.url);
     }
     
-    function getProgressColor(): string {
-        if (download.status === 'COMPLETED') return '#22c55e';
-        if (download.status === 'FAILED') return '#ef4444';
-        if (download.status === 'CANCELLED') return '#6b7280';
-        return '#3b82f6';
-    }
+    $: addedLabel = tFn('downloadItem.added');
+    $: detailsToggleLabel = showDetails ? tFn('downloadItem.hideDetails') : tFn('downloadItem.showDetails');
+    $: cancelLabel = tFn('downloadItem.cancel');
+    $: copyUrlLabel = tFn('downloadItem.copyUrl');
+    $: detailId = tFn('downloadItem.idLabel');
+    $: detailUrl = tFn('downloadItem.urlLabel');
+    $: detailTargetDir = tFn('downloadItem.directoryLabel');
+    $: detailFormat = tFn('downloadItem.formatLabel');
+    $: detailQuality = tFn('downloadItem.qualityLabel');
+    $: detailCreated = tFn('downloadItem.createdLabel');
+    $: detailStarted = tFn('downloadItem.startedLabel');
+    $: detailCompleted = tFn('downloadItem.completedLabel');
     
-    $: addedLabel = t('item.added');
-    $: detailsToggleLabel = t('item.detailsToggle', showDetails);
-    $: cancelLabel = t('item.cancel');
-    $: copyUrlLabel = t('item.copyUrl');
-    $: detailId = t('item.detail.id');
-    $: detailUrl = t('item.detail.url');
-    $: detailTargetDir = t('item.detail.targetDirectory');
-    $: detailFormat = t('item.detail.format');
-    $: detailQuality = t('item.detail.quality');
-    $: detailCreated = t('item.detail.created');
-    $: detailStarted = t('item.detail.started');
-    $: detailCompleted = t('item.detail.completed');
+    $: relativeTime = formatRelativeTime(download.createdAt, unwrapT);
 </script>
 
 <article class="download-item" class:completed={download.status === 'COMPLETED'} class:failed={download.status === 'FAILED'}>
@@ -52,7 +58,7 @@
                 <span class="path">{truncate(download.url, 60)}</span>
             </div>
             <div class="item-meta">
-                <span class="created-at">{addedLabel}: {formatRelativeTime(download.createdAt)}</span>
+                <span class="created-at">{addedLabel}: {relativeTime}</span>
                 {#if download.targetDirectory}
                     <span class="target-dir">📁 {download.targetDirectory}</span>
                 {/if}
@@ -117,44 +123,44 @@
     {#if showDetails}
         <div class="details-panel">
             <div class="detail-row">
-                <span class="detail-label">{detailId}:</span>
+                <span class="detail-label">{detailId}</span>
                 <span class="detail-value mono">{download.id}</span>
             </div>
             <div class="detail-row">
-                <span class="detail-label">{detailUrl}:</span>
+                <span class="detail-label">{detailUrl}</span>
                 <span class="detail-value url" title={download.url}>{download.url}</span>
             </div>
             {#if download.targetDirectory}
                 <div class="detail-row">
-                    <span class="detail-label">{detailTargetDir}:</span>
+                    <span class="detail-label">{detailTargetDir}</span>
                     <span class="detail-value">{download.targetDirectory}</span>
                 </div>
             {/if}
             {#if download.format}
                 <div class="detail-row">
-                    <span class="detail-label">{detailFormat}:</span>
+                    <span class="detail-label">{detailFormat}</span>
                     <span class="detail-value mono">{download.format}</span>
                 </div>
             {/if}
             {#if download.quality}
                 <div class="detail-row">
-                    <span class="detail-label">{detailQuality}:</span>
+                    <span class="detail-label">{detailQuality}</span>
                     <span class="detail-value mono">{download.quality}</span>
                 </div>
             {/if}
             <div class="detail-row">
-                <span class="detail-label">{detailCreated}:</span>
+                <span class="detail-label">{detailCreated}</span>
                 <span class="detail-value">{new Date(download.createdAt).toLocaleString(getLocale() === 'en' ? 'en-US' : 'de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
             </div>
             {#if download.startedAt}
                 <div class="detail-row">
-                    <span class="detail-label">{detailStarted}:</span>
+                    <span class="detail-label">{detailStarted}</span>
                     <span class="detail-value">{new Date(download.startedAt).toLocaleString(getLocale() === 'en' ? 'en-US' : 'de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
             {/if}
             {#if download.completedAt}
                 <div class="detail-row">
-                    <span class="detail-label">{detailCompleted}:</span>
+                    <span class="detail-label">{detailCompleted}</span>
                     <span class="detail-value">{new Date(download.completedAt).toLocaleString(getLocale() === 'en' ? 'en-US' : 'de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
             {/if}

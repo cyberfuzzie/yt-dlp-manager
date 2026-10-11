@@ -1,101 +1,74 @@
+import { init, t, locale as nativeLocale, unwrapFunctionStore } from 'svelte-i18n';
 import { writable } from 'svelte/store';
-import { translations, defaultLocale, availableLocales, type Locale } from './i18n/translations.ts';
 
-/** Current locale – use with Svelte's $ auto-subscription in components. */
-export const locale = writable<Locale>(defaultLocale);
+export { t };
 
-/** Available locales for the language switcher dropdown. */
-export { availableLocales };
-export type { Locale };
+/** Writable locale store – use Svelte's $ auto-subscription for reactivity. */
+export const locale = writable<string>('en');
 
-/** Subscribe to the current locale. */
-export function subscribe(run: (value: Locale) => void): () => void {
-    return locale.subscribe(run);
+/** Initialize svelte-i18n and restore the persisted locale from localStorage. */
+export async function initLocale(): Promise<void> {
+    const persisted = typeof localStorage !== 'undefined' ? localStorage.getItem('yt-dlp-lang') : null;
+    const detectedLocale = detectLocale(persisted);
+    await init({
+        fallbackLocale: 'en',
+        initialLocale: detectedLocale,
+    });
+    // Sync the writable store with svelte-i18n's internal locale.
+    locale.set(detectedLocale);
+    // Keep the writable store in sync with svelte-i18n's locale changes.
+    locale.subscribe((l) => {
+        nativeLocale.set(l);
+    });
+}
+
+/** Detect locale from localStorage or browser, falling back to English. */
+function detectLocale(persisted: string | null): string {
+    if (persisted && (persisted === 'de' || persisted === 'en')) return persisted;
+    if (typeof navigator !== 'undefined' && navigator.language?.startsWith('de')) return 'de';
+    return 'en';
+}
+
+/**
+ * Set the current locale and persist the choice to localStorage.
+ * Accepts any string but only 'de' and 'en' are valid locales.
+ */
+export function setLocale(value: string): void {
+    const targetLocale = value === 'de' ? 'de' : 'en';
+    nativeLocale.set(targetLocale);
+    locale.set(targetLocale);
+    if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('yt-dlp-lang', targetLocale);
+    }
 }
 
 /** Get the current locale synchronously (no subscription). */
-export function getLocale(): Locale {
-    let value: Locale = defaultLocale;
-    locale.subscribe((v) => { value = v; })();
-    return value;
+export function getLocale(): string {
+    let current = 'en';
+    const unsub = nativeLocale.subscribe((v) => { current = v ?? 'en'; });
+    unsub();
+    return current;
 }
 
-/**
- * Translation helper – reads the locale from the writable store internally.
- * Use inside reactive statements together with Svelte's $locale auto-subscription.
- */
-export function t(key: string, ...args: unknown[]): string {
-    const dict = translations[getLocale()];
-    let raw = dict[key];
-    if (raw === undefined) return key;
-    if (typeof raw === 'function') raw = raw(...args);
-    return raw;
+// ── Normalised t helper ──────────────────────────────────────────────────────
+// svelte-i18n's MessageFormatter expects (id, { values }) but callers prefer
+// (id, values).  This wrapper normalises the signature.
+
+const rawT = unwrapFunctionStore(t);
+export const unwrapT: (id: string, values?: Record<string, unknown>) => string =
+    (id, values) => (rawT(id, { values } as any) as string) as string;
+
+/** Factory – call once per component to get a normalised t function. */
+export function createT() {
+    return (id: string, values?: Record<string, unknown>): string =>
+        (rawT(id, { values } as any) as string) as string;
 }
 
-/** Set the locale and persist the choice in localStorage. */
-export function setLocale(value: Locale): void {
-    locale.set(value);
-    try {
-        localStorage.setItem('yt-dlp-lang', value);
-    } catch {
-        // localStorage may be unavailable
-    }
-    updateHtmlLang(value);
-}
+/** Available locales for the language switcher dropdown. */
+export const availableLocales = ['de', 'en'] as const;
+export type Locale = typeof availableLocales[number];
 
-/** Read the persisted locale from localStorage, falling back to the default. */
-function readPersistedLocale(): Locale | null {
-    try {
-        const saved = localStorage.getItem('yt-dlp-lang');
-        if (saved === 'de' || saved === 'en') return saved;
-    } catch {
-        // ignore
-    }
-    return null;
-}
-
-/** Detect the user's preferred locale from the browser. */
-function detectBrowserLocale(): Locale {
-    try {
-        if (typeof navigator !== 'undefined') {
-            const browserLang = navigator.language.toLowerCase();
-            if (browserLang.startsWith('de')) return 'de';
-            if (browserLang.startsWith('en')) return 'en';
-        }
-    } catch {
-        // navigator may not be available (SSR)
-    }
-    return defaultLocale;
-}
-
-/** Update the <html> lang attribute to match the given locale. */
-function updateHtmlLang(value: Locale): void {
-    try {
-        if (typeof document !== 'undefined') {
-            document.documentElement.lang = value;
-            document.documentElement.dataset.lang = value;
-        }
-    } catch {
-        // document may not be available (SSR)
-    }
-}
-
-/**
- * Initialize the locale store from localStorage or browser detection.
- * Call this early (e.g. in onMount of the root layout) so the store
- * has the right value before first render.
- */
-export function initLocale(): void {
-    // 1. Check persisted user choice first
-    const persisted = readPersistedLocale();
-    if (persisted) {
-        locale.set(persisted);
-        updateHtmlLang(persisted);
-        return;
-    }
-
-    // 2. Detect from browser language
-    const detected = detectBrowserLocale();
-    locale.set(detected);
-    updateHtmlLang(detected);
+/** Subscribe to the current locale. */
+export function subscribe(run: (value: string) => void): () => void {
+    return locale.subscribe(run);
 }

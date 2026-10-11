@@ -1,10 +1,14 @@
 <script lang="ts">
-    import { locale, setLocale, availableLocales } from '#lib/i18n.ts';
-    import { localeNames } from '#lib/i18n/translations.ts';
+    import { setLocale, locale, availableLocales } from '#lib/i18n.ts';
+
+    const localeNames: Record<string, string> = {
+        de: 'Deutsch',
+        en: 'English',
+    };
 
     function handleSelect(event: Event) {
         const select = event.target as HTMLSelectElement;
-        setLocale(select.value as 'de' | 'en');
+        setLocale(select.value);
     }
 </script>
 

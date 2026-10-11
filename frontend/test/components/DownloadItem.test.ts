@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import DownloadItem from '#lib/components/DownloadItem.svelte';
-import { setLocale } from '#lib/i18n';
+import { setLocale } from '#lib/i18n.ts';
 import type { DownloadInfo } from '#lib/types.ts';
 import { makeDownload } from '../helpers';
 
@@ -48,12 +48,20 @@ describe('DownloadItem', () => {
 	});
 
 	it('calls onCancel and disables the button', async () => {
-		const onCancel = vi.fn();
+		let resolveCancel: () => void;
+		const onCancel = vi.fn().mockImplementation(
+			() => new Promise<void>(resolve => { resolveCancel = resolve; }),
+		);
 		renderItem(makeDownload({ status: 'DOWNLOADING' }), onCancel);
 		const button = screen.getByLabelText('Download abbrechen');
 		await fireEvent.click(button);
-		expect(onCancel).toHaveBeenCalledWith('id-1');
+
+		// Button should be disabled while cancelling
 		expect(button).toBeDisabled();
+
+		// Complete the async operation
+		resolveCancel!();
+		expect(onCancel).toHaveBeenCalledWith('id-1');
 	});
 
 	it('toggles the details panel', async () => {

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DownloadList from '#lib/components/DownloadList.svelte';
-import { setLocale } from '#lib/i18n';
+import { setLocale } from '#lib/i18n.ts';
 import { makeDownload } from '../helpers';
 
 describe('DownloadList', () => {

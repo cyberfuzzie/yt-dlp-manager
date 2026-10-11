@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DownloadForm from '#lib/components/DownloadForm.svelte';
-import { setLocale } from '#lib/i18n';
+import { setLocale } from '#lib/i18n.ts';
 
 const urlsLabel = 'Video-URLs * (eine pro Zeile)';
 

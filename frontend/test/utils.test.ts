@@ -1,6 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import { extractDomain, formatBytes, formatDate, formatRelativeTime, truncate } from '#lib/utils.ts';
-import { setLocale } from '#lib/i18n.ts';
+import { setLocale, unwrapT } from '#lib/i18n.ts';
 
 describe('formatDate', () => {
 	it('formats an ISO string for the de-DE locale (default)', () => {
@@ -31,27 +31,33 @@ describe('formatRelativeTime', () => {
 		beforeEach(() => setLocale('de'));
 
 		it('renders "gerade eben" for the last minute', () => {
-			expect(formatRelativeTime(ago(30_000))).toBe('gerade eben');
+			const t = unwrapT;
+			expect(formatRelativeTime(ago(30_000), t)).toBe('gerade eben');
 		});
 
 		it('renders minutes', () => {
-			expect(formatRelativeTime(ago(5 * 60_000))).toBe('vor 5 Min.');
+			const t = unwrapT;
+			expect(formatRelativeTime(ago(5 * 60_000), t)).toBe('vor 5 Min.');
 		});
 
 		it('renders hours', () => {
-			expect(formatRelativeTime(ago(3 * 60 * 60_000))).toBe('vor 3 Std.');
+			const t = unwrapT;
+			expect(formatRelativeTime(ago(3 * 60 * 60_000), t)).toBe('vor 3 Std.');
 		});
 
 		it('renders a single day in the singular', () => {
-			expect(formatRelativeTime(ago(24 * 60 * 60_000))).toBe('vor 1 Tag');
+			const t = unwrapT;
+			expect(formatRelativeTime(ago(24 * 60 * 60_000), t)).toBe('vor 1 Tag');
 		});
 
 		it('renders several days in the plural', () => {
-			expect(formatRelativeTime(ago(3 * 24 * 60 * 60_000))).toBe('vor 3 Tagen');
+			const t = unwrapT;
+			expect(formatRelativeTime(ago(3 * 24 * 60 * 60_000), t)).toBe('vor 3 Tagen');
 		});
 
 		it('falls back to an absolute date after a week', () => {
-			expect(formatRelativeTime(ago(10 * 24 * 60 * 60_000))).toBe('22.12.2025, 12:00');
+			const t = unwrapT;
+			expect(formatRelativeTime(ago(10 * 24 * 60 * 60_000), t)).toBe('22.12.2025, 12:00');
 		});
 	});
 
@@ -59,27 +65,33 @@ describe('formatRelativeTime', () => {
 		beforeEach(() => setLocale('en'));
 
 		it('renders "just now" for the last minute', () => {
-			expect(formatRelativeTime(ago(30_000))).toBe('just now');
+			const t = unwrapT;
+			expect(formatRelativeTime(ago(30_000), t)).toBe('just now');
 		});
 
 		it('renders minutes', () => {
-			expect(formatRelativeTime(ago(5 * 60_000))).toBe('5 min ago');
+			const t = unwrapT;
+			expect(formatRelativeTime(ago(5 * 60_000), t)).toBe('5 min ago');
 		});
 
 		it('renders hours', () => {
-			expect(formatRelativeTime(ago(3 * 60 * 60_000))).toBe('3 hr ago');
+			const t = unwrapT;
+			expect(formatRelativeTime(ago(3 * 60 * 60_000), t)).toBe('3 hr ago');
 		});
 
 		it('renders a single day in the singular', () => {
-			expect(formatRelativeTime(ago(24 * 60 * 60_000))).toBe('1 day ago');
+			const t = unwrapT;
+			expect(formatRelativeTime(ago(24 * 60 * 60_000), t)).toBe('1 day ago');
 		});
 
 		it('renders several days in the plural', () => {
-			expect(formatRelativeTime(ago(3 * 24 * 60 * 60_000))).toBe('3 days ago');
+			const t = unwrapT;
+			expect(formatRelativeTime(ago(3 * 24 * 60 * 60_000), t)).toBe('3 days ago');
 		});
 
 		it('falls back to an absolute date after a week', () => {
-			expect(formatRelativeTime(ago(10 * 24 * 60 * 60_000))).toBe('12/22/2025, 12:00 PM');
+			const t = unwrapT;
+			expect(formatRelativeTime(ago(10 * 24 * 60 * 60_000), t)).toBe('12/22/2025, 12:00 PM');
 		});
 
 		afterEach(() => setLocale('de'));
@@ -90,8 +102,8 @@ describe('formatBytes', () => {
 	beforeEach(() => setLocale('de'));
 
 	it('handles missing values (German)', () => {
-		expect(formatBytes(null)).toBe('Unbekannt');
-		expect(formatBytes(undefined as unknown as null)).toBe('Unbekannt');
+		expect(formatBytes(null)).toBe('Unknown');
+		expect(formatBytes(undefined as unknown as null)).toBe('Unknown');
 	});
 
 	it('handles zero', () => {

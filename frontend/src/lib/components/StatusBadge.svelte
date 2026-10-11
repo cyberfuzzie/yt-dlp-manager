@@ -1,14 +1,14 @@
 <script lang="ts">
     import type { DownloadStatus } from '#lib/types.ts';
     import { STATUS_COLORS } from '#lib/types.ts';
-    import { t, getLocale } from '#lib/i18n.ts';
-    import { getStatusLabels } from '#lib/i18n/translations.ts';
-    
+    import { createT } from '#lib/i18n.ts';
+
     export let status: DownloadStatus = 'PENDING';
     export let showLabel = true;
     
-    $: statusLabels = getStatusLabels(getLocale());
-    $: label = statusLabels[status];
+    const tFn = createT();
+    
+    $: label = tFn('status.' + status.toLowerCase());
 </script>
 
 <span 

@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { locale, t } from '#lib/i18n.ts';
     import { onMount, onDestroy } from 'svelte';
+    import { createT } from '#lib/i18n.ts';
     import DownloadForm from '#lib/components/DownloadForm.svelte';
     import DownloadList from '#lib/components/DownloadList.svelte';
     import LanguageSwitcher from '#lib/components/LanguageSwitcher.svelte';
@@ -13,13 +13,12 @@
     let ws: WebSocket | null = null;
     let connectionStatus: 'connecting' | 'connected' | 'disconnected' = 'connecting';
     
-    // Subscribe to locale changes for reactive translations
-    $: _ = $locale;
+    const tFn = createT();
     
     // Reactive translations
-    $: connectionLabel = connectionStatus === 'connected' ? t('connection.connected')
-        : connectionStatus === 'connecting' ? t('connection.connecting')
-        : t('connection.disconnected');
+    $: connectionLabel = connectionStatus === 'connected' ? tFn('connection.connected')
+        : connectionStatus === 'connecting' ? tFn('connection.connecting')
+        : tFn('connection.disconnected');
     
     async function loadConfig() {
         try {
@@ -47,7 +46,7 @@
             );
             // The WebSocket will update the list
         } catch (e) {
-            alert(`${t('error.add')}: ${e instanceof Error ? e.message : t('error.unknown')}`);
+            alert(`${tFn('error.add')}: ${e instanceof Error ? e.message : tFn('error.unknown')}`);
         } finally {
             isLoading = false;
         }
@@ -55,7 +54,7 @@
     
     function handleCancel(id: string) {
         api.cancelDownload(id).catch(e => {
-            alert(`${t('error.cancel')}: ${e instanceof Error ? e.message : t('error.unknown')}`);
+            alert(`${tFn('error.cancel')}: ${e instanceof Error ? e.message : tFn('error.unknown')}`);
         });
     }
     
@@ -96,14 +95,14 @@
 <div class="app">
     <header class="header">
         <div class="header-content">
-            <h1>{t('app.title')}</h1>
+            <h1>{tFn('app.title')}</h1>
             <div class="connection-indicator" class:connected={connectionStatus === 'connected'} class:disconnected={connectionStatus === 'disconnected'}>
                 <span class="dot"></span>
                 <span>{connectionLabel}</span>
             </div>
             <LanguageSwitcher />
         </div>
-        <p class="base-directory">{t('base.directory')}: <code>{baseDirectory}</code></p>
+        <p class="base-directory">{tFn('base.directory')}: <code>{baseDirectory}</code></p>
     </header>
     
     <main class="main">

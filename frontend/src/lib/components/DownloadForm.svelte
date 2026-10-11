@@ -1,12 +1,12 @@
 <script lang="ts">
     import type { DownloadRequest } from '#lib/types.ts';
     import { onMount } from 'svelte';
-    import { locale, t } from '#lib/i18n.ts';
-    
+    import { createT } from '#lib/i18n.ts';
+
     export let onSubmit: (requests: DownloadRequest[]) => void;
     export let isLoading = false;
     export let baseDirectory = '';
-    
+
     let urls = '';
     let targetDirectory = '';
     let format = '';
@@ -14,22 +14,22 @@
     let showAdvanced = false;
     let urlErrors: string[] = [];
     
-    $: _ = $locale;
+    const tFn = createT();
     
-    $: formTitle = t('form.title');
-    $: urlsLabel = t('form.urls.label');
-    $: urlsPlaceholder = t('form.urls.placeholder');
-    $: directoryLabel = t('form.directory.label');
-    $: directoryPlaceholder = t('form.directory.placeholder');
-    $: directoryHint = t('form.directory.hint');
-    $: advancedText = showAdvanced ? t('form.advancedLess') : t('form.advanced');
-    $: submitText = isLoading ? t('form.submitting') : t('form.submit');
-    $: formatLabel = t('form.format.label');
-    $: formatPlaceholder = t('form.format.placeholder');
-    $: formatHint = t('form.format.hint');
-    $: qualityLabel = t('form.quality.label');
-    $: qualityPlaceholder = t('form.quality.placeholder');
-    $: qualityHint = t('form.quality.hint');
+    $: formTitle = tFn('form.title');
+    $: urlsLabel = tFn('form.urls.label');
+    $: urlsPlaceholder = tFn('form.urls.placeholder');
+    $: directoryLabel = tFn('form.directory.label');
+    $: directoryPlaceholder = tFn('form.directory.placeholder');
+    $: directoryHint = tFn('form.directory.hint');
+    $: advancedText = showAdvanced ? tFn('form.advancedLess') : tFn('form.advanced');
+    $: submitText = isLoading ? tFn('form.submitting') : tFn('form.submit');
+    $: formatLabel = tFn('form.format.label');
+    $: formatPlaceholder = tFn('form.format.placeholder');
+    $: formatHint = tFn('form.format.hint');
+    $: qualityLabel = tFn('form.quality.label');
+    $: qualityPlaceholder = tFn('form.quality.placeholder');
+    $: qualityHint = tFn('form.quality.hint');
     
     function parseUrls(): string[] {
         return urls
@@ -43,7 +43,7 @@
         const urlList = parseUrls();
         
         if (urlList.length === 0) {
-            urlErrors.push(t('form.urls.required'));
+            urlErrors.push(tFn('form.urls.required'));
             return false;
         }
         
@@ -51,7 +51,7 @@
             try {
                 new URL(url);
             } catch {
-                urlErrors.push(t('form.urls.invalid', url));
+                urlErrors.push(tFn('form.urls.invalid', { url } as Parameters<typeof tFn>[1]));
                 return false;
             }
         }
@@ -89,7 +89,7 @@
         return parseUrls().length;
     }
     
-    $: urlCountText = urls.trim() ? t('form.urls.urlCount', getUrlCount()) : '';
+    $: urlCountText = urls.trim() ? tFn(getUrlCount() === 1 ? 'form.urls.urlCountSingular' : 'form.urls.urlCountPlural', { n: getUrlCount() }) : '';
 </script>
 
 <div class="download-form-container">

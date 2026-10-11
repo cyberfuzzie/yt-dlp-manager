@@ -2,16 +2,18 @@
     import type { DownloadInfo, DownloadStatus } from '#lib/types.ts';
     import { STATUS_KEYS, STATUS_LABELS } from '#lib/types.ts';
     import DownloadItem from './DownloadItem.svelte';
-    import { locale, t, getLocale } from '#lib/i18n.ts';
-    import { getStatusLabels } from '#lib/i18n/translations.ts';
+    import { createT } from '#lib/i18n.ts';
     
     export let downloads: DownloadInfo[] = [];
     export let onCancel: (id: string) => void;
     
-    // Subscribe to locale changes for reactive translations
-    $: _ = $locale;
+    const tFn = createT();
     
-    $: statusLabels = getStatusLabels(getLocale());
+    let statusLabels: Record<DownloadStatus, string> = {} as Record<DownloadStatus, string>;
+    
+    $: statusLabels = Object.fromEntries(
+        STATUS_KEYS.map(status => [status, tFn('status.' + status.toLowerCase())])
+    ) as Record<DownloadStatus, string>;
     
     $: sortedDownloads = [...downloads].sort((a, b) => {
         const statusOrder = ['DOWNLOADING', 'PENDING', 'FAILED', 'COMPLETED', 'CANCELLED'];
@@ -47,9 +49,9 @@
         return colors[status ?? ''] || '#6b7280';
     }
     
-    $: headerTitle = t('list.header', downloads.length);
-    $: emptyTitle = t('list.empty.title');
-    $: emptyHint = t('list.empty.hint');
+    $: headerTitle = tFn('downloadList.header', { count: downloads.length });
+    $: emptyTitle = tFn('downloadList.empty');
+    $: emptyHint = tFn('downloadList.emptyHint');
 </script>
 
 <div class="download-list">
