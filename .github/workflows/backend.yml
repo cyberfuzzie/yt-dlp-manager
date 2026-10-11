@@ -4,17 +4,12 @@ on:
   push:
     branches: [main]
     tags: ['v*']
-    paths:
-      - 'backend/**'
-      - '.github/workflows/backend.yml'
   pull_request:
     branches: [main]
-    paths:
-      - 'backend/**'
-      - '.github/workflows/backend.yml'
 
 permissions:
   contents: read
+  pull-requests: read
   packages: write
 
 env:
@@ -27,12 +22,38 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Detect whether relevant files changed (backend sources or this workflow).
+      - name: Check for relevant changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - '.github/workflows/backend.yml'
+
+      # Build when relevant files changed OR a Git tag is pushed.
+      # A tag release must always produce both images, so tags bypass the filter.
+      - name: Determine if build is needed
+        id: build
+        shell: bash
+        run: |
+          if [[ "${{ steps.filter.outputs.backend }}" == 'true' || "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Set up Docker Buildx
+        if: steps.build.outputs.should_build == 'true'
         uses: docker/setup-buildx-action@v3
 
       # Tag with the release name for tags, otherwise with the commit SHA.
       - name: Compute image tag
+        if: steps.build.outputs.should_build == 'true'
         id: image_tag
         shell: bash
         run: |
@@ -43,14 +64,15 @@ jobs:
           fi
 
       - name: Log in to GitHub Container Registry
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
+        if: steps.build.outputs.should_build == 'true' && github.event_name != 'pull_request'
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push backend image
+        if: steps.build.outputs.should_build == 'true'
         uses: docker/build-push-action@v6
         with:
           context: ./backend
@@ -58,3 +80,12 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.image_tag.outputs.value }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Report build status
+        shell: bash
+        run: |
+          if [[ "${{ steps.build.outputs.should_build }}" == 'true' ]]; then
+            echo "✅ Backend image built"
+          else
+            echo "⏭️ No relevant changes in backend/ - build skipped"
+          fi
