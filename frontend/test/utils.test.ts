@@ -102,8 +102,8 @@ describe('formatBytes', () => {
 	beforeEach(() => setLocale('de'));
 
 	it('handles missing values (German)', () => {
-		expect(formatBytes(null)).toBe('Unknown');
-		expect(formatBytes(undefined as unknown as null)).toBe('Unknown');
+		expect(formatBytes(null)).toBe('Unbekannt');
+		expect(formatBytes(undefined as unknown as null)).toBe('Unbekannt');
 	});
 
 	it('handles zero', () => {
@@ -113,7 +113,7 @@ describe('formatBytes', () => {
 	it('formats each unit', () => {
 		expect(formatBytes(512)).toBe('512 B');
 		expect(formatBytes(1024)).toBe('1 KB');
-		expect(formatBytes(1536)).toBe('1.5 KB');
+		expect(formatBytes(1536)).toBe('1,5 KB');
 		expect(formatBytes(1024 * 1024)).toBe('1 MB');
 		expect(formatBytes(1024 * 1024 * 1024)).toBe('1 GB');
 		expect(formatBytes(1024 ** 4)).toBe('1 TB');
@@ -122,6 +122,7 @@ describe('formatBytes', () => {
 	it('handles missing values (English)', () => {
 		setLocale('en');
 		expect(formatBytes(null)).toBe('Unknown');
+		expect(formatBytes(1536)).toBe('1.5 KB');
 		setLocale('de');
 	});
 });

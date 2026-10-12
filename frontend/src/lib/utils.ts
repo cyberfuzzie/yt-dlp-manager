@@ -29,15 +29,23 @@ export function formatRelativeTime(dateString: string, t: typeof unwrapT): strin
     return formatDate(dateString);
 }
 
-export function formatBytes(bytes: number | null): string {
-    if (bytes === null || bytes === undefined) return 'Unknown';
+/**
+ * Formats a byte count into a human-readable string with locale-aware number formatting.
+ * Unit symbols (B, KB, MB, …) are kept as-is — they are universally recognised in computing.
+ */
+export function formatBytes(bytes: number | null, locale?: string): string {
+    if (bytes === null || bytes === undefined) return unwrapT('utils.unknown');
     if (bytes === 0) return '0 B';
 
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
+    const formattedValue = (bytes / Math.pow(k, i)).toFixed(2);
 
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    const loc = locale ?? (getLocale() === 'de' ? 'de-DE' : 'en-US');
+    const formattedNum = new Number(formattedValue).toLocaleString(loc);
+
+    return `${formattedNum} ${sizes[i]}`;
 }
 
 export function truncate(str: string, maxLength: number): string {

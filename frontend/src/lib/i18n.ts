@@ -25,6 +25,12 @@ function detectLocale(persisted: string | null): string {
 /**
  * Set the current locale and persist the choice to localStorage.
  * Accepts any string but only 'de' and 'en' are valid locales.
+ *
+ * **Normalisation:** Any value that is not exactly `'de'` maps to `'en'`
+ * (including `'DE'`, `'de-DE'`, `'english'`, etc.). This makes the API
+ * robust against user input but it **does not emit a warning** for invalid
+ * values. Callers should pass only `'de'` or `'en'` — use `detectLocale()`
+ * if the source value may contain subtags or mixed case.
  */
 export function setLocale(value: string): void {
     const targetLocale = value === 'de' ? 'de' : 'en';

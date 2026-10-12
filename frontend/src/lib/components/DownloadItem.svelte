@@ -1,10 +1,10 @@
 <script lang="ts">
     import type { DownloadInfo } from '#lib/types.ts';
     import StatusBadge from './StatusBadge.svelte';
-    import { formatRelativeTime, formatBytes, truncate, extractDomain } from '#lib/utils.ts';
+    import { formatRelativeTime, formatBytes, formatDate, truncate, extractDomain } from '#lib/utils.ts';
     import { api } from '#lib/api.ts';
     import { t as getT } from 'svelte-i18n';
-    import { unwrapT } from '#lib/i18n.ts';
+    import { unwrapT, locale } from '#lib/i18n.ts';
     
     export let download!: DownloadInfo;
     export let onCancel: (id: string) => void;
@@ -34,6 +34,14 @@
     }
     
     $: relativeTime = formatRelativeTime(download.createdAt, unwrapT);
+
+    $: createdDate = formatDate(download.createdAt, $locale === 'de' ? 'de-DE' : 'en-US');
+    $: startedDate = download.startedAt
+        ? formatDate(download.startedAt, $locale === 'de' ? 'de-DE' : 'en-US')
+        : undefined;
+    $: completedDate = download.completedAt
+        ? formatDate(download.completedAt, $locale === 'de' ? 'de-DE' : 'en-US')
+        : undefined;
 </script>
 
 <article class="download-item" class:completed={download.status === 'COMPLETED'} class:failed={download.status === 'FAILED'}>
@@ -136,18 +144,18 @@
             {/if}
             <div class="detail-row">
                 <span class="detail-label">{$getT('downloadItem.createdLabel')}</span>
-                <span class="detail-value">{new Date(download.createdAt).toLocaleString('en-US', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                <span class="detail-value">{createdDate}</span>
             </div>
             {#if download.startedAt}
                 <div class="detail-row">
                     <span class="detail-label">{$getT('downloadItem.startedLabel')}</span>
-                    <span class="detail-value">{new Date(download.startedAt).toLocaleString('en-US', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                    <span class="detail-value">{startedDate}</span>
                 </div>
             {/if}
             {#if download.completedAt}
                 <div class="detail-row">
                     <span class="detail-label">{$getT('downloadItem.completedLabel')}</span>
-                    <span class="detail-value">{new Date(download.completedAt).toLocaleString('en-US', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                    <span class="detail-value">{completedDate}</span>
                 </div>
             {/if}
         </div>

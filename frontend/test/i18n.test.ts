@@ -17,50 +17,24 @@ describe('locale store', () => {
 		expect(['de', 'en']).toContain(loc);
 	});
 
-	it('setLocale updates the store and calls setNativeLocale', () => {
+	it('setLocale updates the store and persists to localStorage', () => {
 		const received: string[] = [];
 		const unsubscribe = locale.subscribe((l) => { received.push(l); });
+		const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
+		setItemSpy.mockImplementation(() => {});
 		setLocale('en');
 		unsubscribe();
 		expect(received).toContain('en');
-		setLocale('de');
-	});
-
-	it('setLocale persists to localStorage', () => {
-		const getItemSpy = vi.spyOn(Storage.prototype, 'getItem');
-		const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
-		setItemSpy.mockImplementation(() => {});
-		setLocale('en');
 		expect(setItemSpy).toHaveBeenCalledWith('yt-dlp-lang', 'en');
 		setLocale('de');
 	});
 
-	it('setLocale rejects invalid values without throwing', () => {
-		// Accepts any string; only de/en are valid
+	it('normalises invalid values without throwing', () => {
 		setLocale('fr');
-		// Should not throw
-	});
-});
-
-describe('localeNames', () => {
-	it('shows languages in their native names', () => {
-		const localeNames: Record<string, string> = { de: 'Deutsch', en: 'English' };
-		expect(localeNames.de).toBe('Deutsch');
-		expect(localeNames.en).toBe('English');
-	});
-});
-
-describe('setLocale side-effects', () => {
-	beforeEach(() => {
+		expect(getLocale()).toBe('en');
+		setLocale('DE');
+		expect(getLocale()).toBe('en');
 		setLocale('de');
-		vi.restoreAllMocks();
-	});
-
-	it('persists the chosen locale to localStorage', () => {
-		const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
-		setItemSpy.mockImplementation(() => {});
-		setLocale('en');
-		expect(setItemSpy).toHaveBeenCalledWith('yt-dlp-lang', 'en');
 	});
 });
 
