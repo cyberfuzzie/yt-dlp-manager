@@ -3,15 +3,14 @@
     import StatusBadge from './StatusBadge.svelte';
     import { formatRelativeTime, formatBytes, truncate, extractDomain } from '#lib/utils.ts';
     import { api } from '#lib/api.ts';
-    import { getLocale, unwrapT, createT } from '#lib/i18n.ts';
+    import { t as getT } from 'svelte-i18n';
+    import { unwrapT } from '#lib/i18n.ts';
     
     export let download!: DownloadInfo;
     export let onCancel: (id: string) => void;
     
     let showDetails = false;
     let isCancelling = false;
-    
-    const tFn = createT();
     
     async function handleCancel() {
         if (isCancelling) return;
@@ -34,19 +33,6 @@
         navigator.clipboard.writeText(download.url);
     }
     
-    $: addedLabel = tFn('downloadItem.added');
-    $: detailsToggleLabel = showDetails ? tFn('downloadItem.hideDetails') : tFn('downloadItem.showDetails');
-    $: cancelLabel = tFn('downloadItem.cancel');
-    $: copyUrlLabel = tFn('downloadItem.copyUrl');
-    $: detailId = tFn('downloadItem.idLabel');
-    $: detailUrl = tFn('downloadItem.urlLabel');
-    $: detailTargetDir = tFn('downloadItem.directoryLabel');
-    $: detailFormat = tFn('downloadItem.formatLabel');
-    $: detailQuality = tFn('downloadItem.qualityLabel');
-    $: detailCreated = tFn('downloadItem.createdLabel');
-    $: detailStarted = tFn('downloadItem.startedLabel');
-    $: detailCompleted = tFn('downloadItem.completedLabel');
-    
     $: relativeTime = formatRelativeTime(download.createdAt, unwrapT);
 </script>
 
@@ -58,7 +44,7 @@
                 <span class="path">{truncate(download.url, 60)}</span>
             </div>
             <div class="item-meta">
-                <span class="created-at">{addedLabel}: {relativeTime}</span>
+                <span class="created-at">{$getT('downloadItem.added')}: {relativeTime}</span>
                 {#if download.targetDirectory}
                     <span class="target-dir">📁 {download.targetDirectory}</span>
                 {/if}
@@ -70,8 +56,8 @@
             <button 
                 class="btn-icon" 
                 on:click={() => showDetails = !showDetails}
-                aria-label={detailsToggleLabel}
-                title={detailsToggleLabel}
+                aria-label={$getT(showDetails ? 'downloadItem.hideDetails' : 'downloadItem.showDetails')}
+                title={$getT(showDetails ? 'downloadItem.hideDetails' : 'downloadItem.showDetails')}
             >
                 {showDetails ? '▲' : '▼'}
             </button>
@@ -80,8 +66,8 @@
                     class="btn-icon btn-danger" 
                     on:click={handleCancel}
                     disabled={isCancelling}
-                    aria-label={cancelLabel}
-                    title={cancelLabel}
+                    aria-label={$getT('downloadItem.cancel')}
+                    title={$getT('downloadItem.cancel')}
                 >
                     ✕
                 </button>
@@ -116,52 +102,52 @@
         <div class="error-info">
             <span class="error-icon">⚠</span>
             <span class="error-text">{download.errorMessage}</span>
-            <button class="btn-copy" on:click={copyUrl} title={copyUrlLabel}>📋</button>
+            <button class="btn-copy" on:click={copyUrl} title={$getT('downloadItem.copyUrl')}>📋</button>
         </div>
     {/if}
     
     {#if showDetails}
         <div class="details-panel">
             <div class="detail-row">
-                <span class="detail-label">{detailId}</span>
+                <span class="detail-label">{$getT('downloadItem.idLabel')}</span>
                 <span class="detail-value mono">{download.id}</span>
             </div>
             <div class="detail-row">
-                <span class="detail-label">{detailUrl}</span>
+                <span class="detail-label">{$getT('downloadItem.urlLabel')}</span>
                 <span class="detail-value url" title={download.url}>{download.url}</span>
             </div>
             {#if download.targetDirectory}
                 <div class="detail-row">
-                    <span class="detail-label">{detailTargetDir}</span>
+                    <span class="detail-label">{$getT('downloadItem.directoryLabel')}</span>
                     <span class="detail-value">{download.targetDirectory}</span>
                 </div>
             {/if}
             {#if download.format}
                 <div class="detail-row">
-                    <span class="detail-label">{detailFormat}</span>
+                    <span class="detail-label">{$getT('downloadItem.formatLabel')}</span>
                     <span class="detail-value mono">{download.format}</span>
                 </div>
             {/if}
             {#if download.quality}
                 <div class="detail-row">
-                    <span class="detail-label">{detailQuality}</span>
+                    <span class="detail-label">{$getT('downloadItem.qualityLabel')}</span>
                     <span class="detail-value mono">{download.quality}</span>
                 </div>
             {/if}
             <div class="detail-row">
-                <span class="detail-label">{detailCreated}</span>
-                <span class="detail-value">{new Date(download.createdAt).toLocaleString(getLocale() === 'en' ? 'en-US' : 'de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                <span class="detail-label">{$getT('downloadItem.createdLabel')}</span>
+                <span class="detail-value">{new Date(download.createdAt).toLocaleString('en-US', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
             </div>
             {#if download.startedAt}
                 <div class="detail-row">
-                    <span class="detail-label">{detailStarted}</span>
-                    <span class="detail-value">{new Date(download.startedAt).toLocaleString(getLocale() === 'en' ? 'en-US' : 'de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                    <span class="detail-label">{$getT('downloadItem.startedLabel')}</span>
+                    <span class="detail-value">{new Date(download.startedAt).toLocaleString('en-US', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
             {/if}
             {#if download.completedAt}
                 <div class="detail-row">
-                    <span class="detail-label">{detailCompleted}</span>
-                    <span class="detail-value">{new Date(download.completedAt).toLocaleString(getLocale() === 'en' ? 'en-US' : 'de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                    <span class="detail-label">{$getT('downloadItem.completedLabel')}</span>
+                    <span class="detail-value">{new Date(download.completedAt).toLocaleString('en-US', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
             {/if}
         </div>

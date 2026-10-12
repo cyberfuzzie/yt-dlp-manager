@@ -2,17 +2,17 @@
     import type { DownloadInfo, DownloadStatus } from '#lib/types.ts';
     import { STATUS_KEYS, STATUS_LABELS } from '#lib/types.ts';
     import DownloadItem from './DownloadItem.svelte';
-    import { createT } from '#lib/i18n.ts';
+    import { t as getT } from 'svelte-i18n';
+    import { unwrapT } from '#lib/i18n.ts';
     
     export let downloads: DownloadInfo[] = [];
     export let onCancel: (id: string) => void;
     
-    const tFn = createT();
-    
+    // Reactive computed values — depend on `downloads` prop and translation function.
     let statusLabels: Record<DownloadStatus, string> = {} as Record<DownloadStatus, string>;
     
     $: statusLabels = Object.fromEntries(
-        STATUS_KEYS.map(status => [status, tFn('status.' + status.toLowerCase())])
+        STATUS_KEYS.map(status => [status, unwrapT('status.' + status.toLowerCase())])
     ) as Record<DownloadStatus, string>;
     
     $: sortedDownloads = [...downloads].sort((a, b) => {
@@ -24,21 +24,20 @@
     });
     
     $: downloadsByStatus = Object.fromEntries(
-        STATUS_KEYS.map(status => [statusLabels[status], sortedDownloads.filter(d => d.status === status)])
-    ) as Record<string, DownloadInfo[]>;
+        STATUS_KEYS.map(status => [status, sortedDownloads.filter(d => d.status === status)])
+    ) as Record<DownloadStatus, DownloadInfo[]>;
     
-    function getStatusCounts(): Record<string, number> {
-        const counts: Record<string, number> = {};
+    function getStatusCounts(): Record<DownloadStatus, number> {
+        const counts: Record<DownloadStatus, number> = {} as Record<DownloadStatus, number>;
         for (const status of STATUS_KEYS) {
-            counts[statusLabels[status]] = downloads.filter(d => d.status === status).length;
+            counts[status] = downloads.filter(d => d.status === status).length;
         }
         return counts;
     }
     
     $: statusCounts = getStatusCounts();
     
-    function getStatusColor(label: string): string {
-        const status = STATUS_KEYS.find(s => statusLabels[s] === label);
+    function getStatusColor(status: string): string {
         const colors: Record<string, string> = {
             PENDING: '#fbbf24',
             DOWNLOADING: '#3b82f6',
@@ -46,12 +45,8 @@
             FAILED: '#ef4444',
             CANCELLED: '#6b7280',
         };
-        return colors[status ?? ''] || '#6b7280';
+        return colors[status] || '#6b7280';
     }
-    
-    $: headerTitle = tFn('downloadList.header', { count: downloads.length });
-    $: emptyTitle = tFn('downloadList.empty');
-    $: emptyHint = tFn('downloadList.emptyHint');
 </script>
 
 <div class="download-list">
@@ -60,17 +55,17 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="empty-icon">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M17 10l-5 5-5-5"/>
             </svg>
-            <p>{emptyTitle}</p>
-            <span>{emptyHint}</span>
+            <p>{$getT('downloadList.empty')}</p>
+            <span>{$getT('downloadList.emptyHint')}</span>
         </div>
     {:else}
         <div class="list-header">
-            <h3>{headerTitle}</h3>
+            <h3>{$getT('downloadList.header', { values: { count: downloads.length } })}</h3>
             <div class="status-summary">
-                {#each Object.entries(statusCounts) as [label, count]}
+                {#each Object.entries(statusCounts) as [status, count]}
                     {#if count > 0}
-                        <span class="status-count" style="--status-color: {getStatusColor(label)}">
-                            {label}: {count}
+                        <span class="status-count" style="--status-color: {getStatusColor(status)}">
+                            {unwrapT('status.' + status.toLowerCase())}: {count}
                         </span>
                     {/if}
                 {/each}
@@ -78,12 +73,12 @@
         </div>
         
         <div class="downloads-container">
-            {#each Object.entries(downloadsByStatus) as [statusLabel, statusDownloads]}
+            {#each Object.entries(downloadsByStatus) as [status, statusDownloads]}
                 {#if statusDownloads.length > 0}
                     <section class="status-section">
                         <h4 class="status-section-title">
-                            <span class="status-dot" style="background: {getStatusColor(statusLabel)}"></span>
-                            {statusLabel} ({statusDownloads.length})
+                            <span class="status-dot" style="background: {getStatusColor(status)}"></span>
+                            {unwrapT('status.' + status.toLowerCase())} ({statusDownloads.length})
                         </h4>
                         <div class="status-items">
                             {#each statusDownloads as download (download.id)}

@@ -1,24 +1,20 @@
 <script lang="ts">
     import type { DownloadStatus } from '#lib/types.ts';
     import { STATUS_COLORS } from '#lib/types.ts';
-    import { createT } from '#lib/i18n.ts';
+    import { t as getT } from 'svelte-i18n';
 
     export let status: DownloadStatus = 'PENDING';
     export let showLabel = true;
-    
-    const tFn = createT();
-    
-    $: label = tFn('status.' + status.toLowerCase());
 </script>
 
 <span 
     class="status-badge" 
     style="--status-color: {STATUS_COLORS[status]}"
-    title={label}
+    title={$getT('status.' + status.toLowerCase())}
 >
     <span class="status-dot"></span>
     {#if showLabel}
-        <span class="status-label">{label}</span>
+        <span class="status-label">{$getT('status.' + status.toLowerCase())}</span>
     {/if}
 </span>
 

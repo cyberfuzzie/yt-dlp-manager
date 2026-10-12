@@ -1,4 +1,4 @@
-import { addMessages, init, t, locale as nativeLocale, unwrapFunctionStore } from 'svelte-i18n';
+import { addMessages, init, t, locale as nativeLocale } from 'svelte-i18n';
 import { writable } from 'svelte/store';
 import en from '../locales/en.json';
 import de from '../locales/de.json';
@@ -43,18 +43,27 @@ export function getLocale(): string {
     return current;
 }
 
-// ── Normalised t helper ──────────────────────────────────────────────────────
-// svelte-i18n's MessageFormatter expects (id, { values }) but callers prefer
-// (id, values).  This wrapper normalises the signature.
-
-const rawT = unwrapFunctionStore(t);
+/**
+ * Normalised translation function – reads the latest t value on each call
+ * so that locale changes are always respected.
+ */
 export const unwrapT: (id: string, values?: Record<string, unknown>) => string =
-    (id, values) => (rawT(id, { values } as any) as string) as string;
+    (id, values) => {
+        let fn: Function | undefined;
+        t.subscribe((f) => (fn = f))();
+        return fn!(id, { values } as any) as string;
+    };
 
-/** Factory – call once per component to get a normalised t function. */
+/**
+ * Factory – call once per component to get a normalised t function.
+ * The returned function reads the latest t value on each invocation.
+ */
 export function createT() {
-    return (id: string, values?: Record<string, unknown>): string =>
-        (rawT(id, { values } as any) as string) as string;
+    return (id: string, values?: Record<string, unknown>): string => {
+        let fn: Function | undefined;
+        t.subscribe((f) => (fn = f))();
+        return fn!(id, { values } as any) as string;
+    };
 }
 
 /** Available locales for the language switcher dropdown. */
@@ -70,8 +79,13 @@ export function subscribe(run: (value: string) => void): () => void {
 export function initLocale(): void {
     const persisted = typeof localStorage !== 'undefined' ? localStorage.getItem('yt-dlp-lang') : null;
     const detectedLocale = detectLocale(persisted);
-    // Only update if different — init() already set 'en' as the locale.
-    if (detectedLocale !== locale.value) {
+    const currentLocale = (() => {
+        let v = 'en';
+        let unsub: (() => void) | undefined;
+        unsub = locale.subscribe(val => { v = val; unsub?.(); });
+        return v;
+    })();
+    if (detectedLocale !== currentLocale) {
         nativeLocale.set(detectedLocale);
         locale.set(detectedLocale);
     }

@@ -1,7 +1,8 @@
 <script lang="ts">
     import type { DownloadRequest } from '#lib/types.ts';
     import { onMount } from 'svelte';
-    import { createT } from '#lib/i18n.ts';
+    import { t as getT } from 'svelte-i18n';
+    import { unwrapT } from '#lib/i18n.ts';
 
     export let onSubmit: (requests: DownloadRequest[]) => void;
     export let isLoading = false;
@@ -13,23 +14,6 @@
     let quality = '';
     let showAdvanced = false;
     let urlErrors: string[] = [];
-    
-    const tFn = createT();
-    
-    $: formTitle = tFn('form.title');
-    $: urlsLabel = tFn('form.urls.label');
-    $: urlsPlaceholder = tFn('form.urls.placeholder');
-    $: directoryLabel = tFn('form.directory.label');
-    $: directoryPlaceholder = tFn('form.directory.placeholder');
-    $: directoryHint = tFn('form.directory.hint');
-    $: advancedText = showAdvanced ? tFn('form.advancedLess') : tFn('form.advanced');
-    $: submitText = isLoading ? tFn('form.submitting') : tFn('form.submit');
-    $: formatLabel = tFn('form.format.label');
-    $: formatPlaceholder = tFn('form.format.placeholder');
-    $: formatHint = tFn('form.format.hint');
-    $: qualityLabel = tFn('form.quality.label');
-    $: qualityPlaceholder = tFn('form.quality.placeholder');
-    $: qualityHint = tFn('form.quality.hint');
     
     function parseUrls(): string[] {
         return urls
@@ -43,7 +27,7 @@
         const urlList = parseUrls();
         
         if (urlList.length === 0) {
-            urlErrors.push(tFn('form.urls.required'));
+            urlErrors.push(unwrapT('form.urls.required'));
             return false;
         }
         
@@ -51,7 +35,7 @@
             try {
                 new URL(url);
             } catch {
-                urlErrors.push(tFn('form.urls.invalid', { url } as Parameters<typeof tFn>[1]));
+                urlErrors.push(unwrapT('form.urls.invalid', { url } as Parameters<typeof unwrapT>[1]));
                 return false;
             }
         }
@@ -84,24 +68,18 @@
             urls = pastedText;
         }
     }
-    
-    function getUrlCount(): number {
-        return parseUrls().length;
-    }
-    
-    $: urlCountText = urls.trim() ? tFn(getUrlCount() === 1 ? 'form.urls.urlCountSingular' : 'form.urls.urlCountPlural', { n: getUrlCount() }) : '';
 </script>
 
 <div class="download-form-container">
-    <h2>{formTitle}</h2>
+    <h2>{$getT('form.title')}</h2>
     
     <form on:submit={handleSubmit} class="download-form">
         <div class="form-group">
-            <label for="urls">{urlsLabel}</label>
+            <label for="urls">{$getT('form.urls.label')}</label>
             <textarea
                 id="urls"
                 bind:value={urls}
-                placeholder={urlsPlaceholder}
+                placeholder={$getT('form.urls.placeholder')}
                 on:paste={handlePaste}
                 class:invalid={urlErrors.length > 0}
                 disabled={isLoading}
@@ -109,7 +87,12 @@
                 rows={4}
             ></textarea>
             {#if urls.trim()}
-                <span class="url-count">{urlCountText}</span>
+                    <span class="url-count">
+                        {parseUrls().length === 1 
+                            ? $getT('form.urls.urlCountSingular', { values: { n: parseUrls().length } })
+                            : $getT('form.urls.urlCountPlural', { values: { n: parseUrls().length } })
+                        }
+                    </span>
             {/if}
             {#if urlErrors.length > 0}
                 {#each urlErrors as error}
@@ -120,57 +103,57 @@
         
         <div class="form-row">
             <div class="form-group">
-                <label for="targetDirectory">{directoryLabel}</label>
+                <label for="targetDirectory">{$getT('form.directory.label')}</label>
                 <div class="input-with-prefix">
                     <span class="prefix">{baseDirectory}/</span>
                     <input
                         id="targetDirectory"
                         type="text"
                         bind:value={targetDirectory}
-                        placeholder={directoryPlaceholder}
+                        placeholder={$getT('form.directory.placeholder')}
                         disabled={isLoading}
                     />
                 </div>
-                <span class="hint">{directoryHint}</span>
+                <span class="hint">{$getT('form.directory.hint')}</span>
             </div>
         </div>
         
         <button type="button" class="toggle-advanced" on:click={() => showAdvanced = !showAdvanced}>
-            {advancedText}
+            {showAdvanced ? $getT('form.advancedLess') : $getT('form.advanced')}
         </button>
         
         {#if showAdvanced}
             <div class="advanced-options">
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="format">{formatLabel}</label>
+                        <label for="format">{$getT('form.format.label')}</label>
                         <input
                             id="format"
                             type="text"
                             bind:value={format}
-                            placeholder={formatPlaceholder}
+                            placeholder={$getT('form.format.placeholder')}
                             disabled={isLoading}
                         />
-                        <span class="hint">{formatHint}</span>
+                        <span class="hint">{$getT('form.format.hint')}</span>
                     </div>
                     
                     <div class="form-group">
-                        <label for="quality">{qualityLabel}</label>
+                        <label for="quality">{$getT('form.quality.label')}</label>
                         <input
                             id="quality"
                             type="text"
                             bind:value={quality}
-                            placeholder={qualityPlaceholder}
+                            placeholder={$getT('form.quality.placeholder')}
                             disabled={isLoading}
                         />
-                        <span class="hint">{qualityHint}</span>
+                        <span class="hint">{$getT('form.quality.hint')}</span>
                     </div>
                 </div>
             </div>
         {/if}
         
         <button type="submit" class="btn-primary" disabled={isLoading || urls.trim() === ''}>
-            {submitText}
+            {isLoading ? $getT('form.submitting') : $getT('form.submit')}
         </button>
     </form>
 </div>
