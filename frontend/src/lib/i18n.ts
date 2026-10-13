@@ -13,6 +13,9 @@ export { locale };
 addMessages('en', en);
 addMessages('de', de);
 
+// Initialize svelte-i18n eagerly so t() and $getT work before onMount.
+await init({ fallbackLocale: 'en', initialLocale: 'en' });
+
 /** Detect locale from localStorage or browser, falling back to English. */
 function detectLocale(persisted: string | null): string {
     if (persisted && (persisted === 'de' || persisted === 'en')) return persisted;
