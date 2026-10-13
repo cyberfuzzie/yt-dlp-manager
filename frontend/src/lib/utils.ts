@@ -1,5 +1,11 @@
 import { unwrapT, getLocale } from '#lib/i18n.ts';
 
+/** Translation function that accepts both svelte-i18n and unwrapT signatures. */
+type TranslateFn = (
+    id: string,
+    values?: Record<string, unknown>,
+) => string;
+
 export function formatDate(dateString: string, locale?: string): string {
     const date = new Date(dateString);
     const loc = locale ?? (getLocale() === 'de' ? 'de-DE' : 'en-US');
@@ -12,7 +18,7 @@ export function formatDate(dateString: string, locale?: string): string {
     });
 }
 
-export function formatRelativeTime(dateString: string, t: typeof unwrapT): string {
+export function formatRelativeTime(dateString: string, t: TranslateFn): string {
     const date = new Date(dateString);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
