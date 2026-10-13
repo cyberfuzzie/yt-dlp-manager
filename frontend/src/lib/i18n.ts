@@ -3,9 +3,6 @@ import { get } from 'svelte/store';
 import en from '../locales/en.json';
 import de from '../locales/de.json';
 
-// Re-export svelte-i18n's t store (Readable<TranslateFn>) for component use.
-export { t };
-
 // Re-export svelte-i18n's locale store directly — single source of truth.
 export { locale };
 
