@@ -1,15 +1,19 @@
 <script lang="ts">
     import '../app.css';
     import { onMount } from 'svelte';
-    import { initLocale, locale } from '#lib/i18n.ts';
+    import { initLocale } from '#lib/i18n.ts';
+    import { locale as i18nLocale } from 'svelte-i18n';
 
     onMount(() => {
         initLocale();
-        document.documentElement.lang = $locale;
-        document.documentElement.dataset.lang = $locale;
-        return locale.subscribe((l) => {
-            document.documentElement.lang = l;
-            document.documentElement.dataset.lang = l;
+        // i18nLocale is svelte-i18n's locale store.
+        const lang = $i18nLocale ?? 'en';
+        document.documentElement.lang = lang;
+        document.documentElement.dataset.lang = lang;
+        return i18nLocale.subscribe((l) => {
+            const current = l ?? 'en';
+            document.documentElement.lang = current;
+            document.documentElement.dataset.lang = current;
         });
     });
 </script>

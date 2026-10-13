@@ -1,25 +1,25 @@
 <script lang="ts">
-    import { setLocale, locale, availableLocales } from '#lib/i18n.ts';
+    import { setLocale, availableLocales } from '#lib/i18n.ts';
+    import { locale as i18nLocale } from 'svelte-i18n';
 
     const localeNames: Record<string, string> = {
         de: 'Deutsch',
         en: 'English',
     };
 
-    function handleSelect(event: Event) {
+    function handleChange(event: Event) {
         const select = event.target as HTMLSelectElement;
         setLocale(select.value);
     }
 </script>
 
 <select
-    bind:value={$locale}
-    on:change={handleSelect}
+    on:change={handleChange}
     class="lang-switcher"
     aria-label="Language"
 >
     {#each availableLocales as loc}
-        <option value={loc}>{localeNames[loc]}</option>
+        <option value={loc} selected={$i18nLocale === loc}>{localeNames[loc]}</option>
     {/each}
 </select>
 

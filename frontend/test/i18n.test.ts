@@ -6,7 +6,7 @@ describe('locale store', () => {
 	beforeEach(() => setLocale('de'));
 
 	it('is a writable store initialised with the current locale', () => {
-		const received: string[] = [];
+		const received: (string | null | undefined)[] = [];
 		const unsubscribe = locale.subscribe((l) => { received.push(l); });
 		unsubscribe();
 		expect(received).toContain('de');
@@ -18,7 +18,7 @@ describe('locale store', () => {
 	});
 
 	it('setLocale updates the store and persists to localStorage', () => {
-		const received: string[] = [];
+		const received: (string | null | undefined)[] = [];
 		const unsubscribe = locale.subscribe((l) => { received.push(l); });
 		const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
 		setItemSpy.mockImplementation(() => {});

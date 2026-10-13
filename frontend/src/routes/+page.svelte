@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount, onDestroy } from 'svelte';
-    import { createT } from '#lib/i18n.ts';
+    import { t as getT } from 'svelte-i18n';
     import DownloadForm from '#lib/components/DownloadForm.svelte';
     import DownloadList from '#lib/components/DownloadList.svelte';
     import LanguageSwitcher from '#lib/components/LanguageSwitcher.svelte';
@@ -13,12 +13,11 @@
     let ws: WebSocket | null = null;
     let connectionStatus: 'connecting' | 'connected' | 'disconnected' = 'connecting';
     
-    const tFn = createT();
-    
-    // Reactive translations
-    $: connectionLabel = connectionStatus === 'connected' ? tFn('connection.connected')
-        : connectionStatus === 'connecting' ? tFn('connection.connecting')
-        : tFn('connection.disconnected');
+    // Reactive translations — $getT creates a dependency on the locale store,
+    // so these re-compute when the locale changes.
+    $: connectionLabel = connectionStatus === 'connected' ? $getT('connection.connected')
+        : connectionStatus === 'connecting' ? $getT('connection.connecting')
+        : $getT('connection.disconnected');
     
     async function loadConfig() {
         try {
@@ -46,7 +45,9 @@
             );
             // The WebSocket will update the list
         } catch (e) {
-            alert(`${tFn('error.add')}: ${e instanceof Error ? e.message : tFn('error.unknown')}`);
+            const addLabel = $getT('error.add');
+            const unknown = $getT('error.unknown');
+            alert(`${addLabel}: ${e instanceof Error ? e.message : unknown}`);
         } finally {
             isLoading = false;
         }
@@ -54,7 +55,9 @@
     
     function handleCancel(id: string) {
         api.cancelDownload(id).catch(e => {
-            alert(`${tFn('error.cancel')}: ${e instanceof Error ? e.message : tFn('error.unknown')}`);
+            const cancelLabel = $getT('error.cancel');
+            const unknown = $getT('error.unknown');
+            alert(`${cancelLabel}: ${e instanceof Error ? e.message : unknown}`);
         });
     }
     
@@ -95,14 +98,14 @@
 <div class="app">
     <header class="header">
         <div class="header-content">
-            <h1>{tFn('app.title')}</h1>
+            <h1>{$getT('app.title')}</h1>
             <div class="connection-indicator" class:connected={connectionStatus === 'connected'} class:disconnected={connectionStatus === 'disconnected'}>
                 <span class="dot"></span>
                 <span>{connectionLabel}</span>
             </div>
             <LanguageSwitcher />
         </div>
-        <p class="base-directory">{tFn('base.directory')}: <code>{baseDirectory}</code></p>
+        <p class="base-directory">{$getT('base.directory')}: <code>{baseDirectory}</code></p>
     </header>
     
     <main class="main">

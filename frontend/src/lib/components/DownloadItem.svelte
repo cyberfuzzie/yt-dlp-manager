@@ -4,7 +4,8 @@
     import { formatRelativeTime, formatBytes, formatDate, truncate, extractDomain } from '#lib/utils.ts';
     import { api } from '#lib/api.ts';
     import { t as getT } from 'svelte-i18n';
-    import { unwrapT, locale } from '#lib/i18n.ts';
+    import { unwrapT } from '#lib/i18n.ts';
+    import { locale as i18nLocale } from 'svelte-i18n';
     
     export let download!: DownloadInfo;
     export let onCancel: (id: string) => void;
@@ -35,13 +36,18 @@
     
     $: relativeTime = formatRelativeTime(download.createdAt, $getT);
 
-    $: createdDate = formatDate(download.createdAt, $locale === 'de' ? 'de-DE' : 'en-US');
+    // Locale-aware date formatting — re-computed when locale or dates change.
+    $: localeCode = $i18nLocale === 'de' ? 'de-DE' : 'en-US';
+    $: createdDate = formatDate(download.createdAt, localeCode);
     $: startedDate = download.startedAt
-        ? formatDate(download.startedAt, $locale === 'de' ? 'de-DE' : 'en-US')
+        ? formatDate(download.startedAt, localeCode)
         : undefined;
     $: completedDate = download.completedAt
-        ? formatDate(download.completedAt, $locale === 'de' ? 'de-DE' : 'en-US')
+        ? formatDate(download.completedAt, localeCode)
         : undefined;
+
+    // Locale-aware byte formatting — re-computed when locale or fileSize changes.
+    $: formattedFileSize = formatBytes(download.fileSize, localeCode);
 </script>
 
 <article class="download-item" class:completed={download.status === 'COMPLETED'} class:failed={download.status === 'FAILED'}>
@@ -103,7 +109,7 @@
         <div class="completed-info">
             <span class="filename">📄 {download.filename}</span>
             {#if download.fileSize}
-                <span class="filesize">{formatBytes(download.fileSize)}</span>
+                <span class="filesize">{formattedFileSize}</span>
             {/if}
         </div>
     {:else if download.status === 'FAILED' && download.errorMessage}

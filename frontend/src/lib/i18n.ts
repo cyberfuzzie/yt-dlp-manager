@@ -1,19 +1,17 @@
-import { addMessages, init, t, locale as nativeLocale } from 'svelte-i18n';
-import { writable } from 'svelte/store';
+import { addMessages, init, t, locale } from 'svelte-i18n';
+import { get } from 'svelte/store';
 import en from '../locales/en.json';
 import de from '../locales/de.json';
 
+// Re-export svelte-i18n's t store (Readable<TranslateFn>) for component use.
 export { t };
+
+// Re-export svelte-i18n's locale store directly — single source of truth.
+export { locale };
 
 // Pre-register message dictionaries for all supported locales.
 addMessages('en', en);
 addMessages('de', de);
-
-// Initialize svelte-i18n eagerly so createT() works before onMount.
-await init({ fallbackLocale: 'en', initialLocale: 'en' });
-
-/** Writable locale store – use Svelte's $ auto-subscription for reactivity. */
-export const locale = writable<string>('en');
 
 /** Detect locale from localStorage or browser, falling back to English. */
 function detectLocale(persisted: string | null): string {
@@ -34,7 +32,6 @@ function detectLocale(persisted: string | null): string {
  */
 export function setLocale(value: string): void {
     const targetLocale = value === 'de' ? 'de' : 'en';
-    nativeLocale.set(targetLocale);
     locale.set(targetLocale);
     if (typeof localStorage !== 'undefined') {
         localStorage.setItem('yt-dlp-lang', targetLocale);
@@ -43,10 +40,7 @@ export function setLocale(value: string): void {
 
 /** Get the current locale synchronously (no subscription). */
 export function getLocale(): string {
-    let current = 'en';
-    const unsub = nativeLocale.subscribe((v) => { current = v ?? 'en'; });
-    unsub();
-    return current;
+    return get(locale) ?? 'en';
 }
 
 /**
@@ -85,7 +79,7 @@ export const availableLocales = ['de', 'en'] as const;
 export type Locale = typeof availableLocales[number];
 
 /** Subscribe to the current locale. */
-export function subscribe(run: (value: string) => void): () => void {
+export function subscribe(run: (value: string | null | undefined) => void): () => void {
     return locale.subscribe(run);
 }
 
@@ -93,14 +87,8 @@ export function subscribe(run: (value: string) => void): () => void {
 export function initLocale(): void {
     const persisted = typeof localStorage !== 'undefined' ? localStorage.getItem('yt-dlp-lang') : null;
     const detectedLocale = detectLocale(persisted);
-    const currentLocale = (() => {
-        let v = 'en';
-        let unsub: (() => void) | undefined;
-        unsub = locale.subscribe(val => { v = val; unsub?.(); });
-        return v;
-    })();
+    const currentLocale = get(locale);
     if (detectedLocale !== currentLocale) {
-        nativeLocale.set(detectedLocale);
         locale.set(detectedLocale);
     }
     document.documentElement.lang = detectedLocale;

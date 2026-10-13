@@ -1,19 +1,16 @@
 <script lang="ts">
     import type { DownloadInfo, DownloadStatus } from '#lib/types.ts';
-    import { STATUS_KEYS, STATUS_LABELS } from '#lib/types.ts';
+    import { STATUS_KEYS } from '#lib/types.ts';
     import DownloadItem from './DownloadItem.svelte';
     import { t as getT } from 'svelte-i18n';
-    import { unwrapT } from '#lib/i18n.ts';
     
     export let downloads: DownloadInfo[] = [];
     export let onCancel: (id: string) => void;
     
-    // Reactive computed values — depend on `downloads` prop and translation function.
-    let statusLabels: Record<DownloadStatus, string> = {} as Record<DownloadStatus, string>;
-    
-    $: statusLabels = Object.fromEntries(
-        STATUS_KEYS.map(status => [status, unwrapT('status.' + status.toLowerCase())])
-    ) as Record<DownloadStatus, string>;
+    // Reactive computed values — depend on `downloads` prop and locale store.
+    $: statusCounts = Object.fromEntries(
+        STATUS_KEYS.map(status => [status, downloads.filter(d => d.status === status).length])
+    ) as Record<DownloadStatus, number>;
     
     $: sortedDownloads = [...downloads].sort((a, b) => {
         const statusOrder = ['DOWNLOADING', 'PENDING', 'FAILED', 'COMPLETED', 'CANCELLED'];
@@ -26,16 +23,6 @@
     $: downloadsByStatus = Object.fromEntries(
         STATUS_KEYS.map(status => [status, sortedDownloads.filter(d => d.status === status)])
     ) as Record<DownloadStatus, DownloadInfo[]>;
-    
-    function getStatusCounts(): Record<DownloadStatus, number> {
-        const counts: Record<DownloadStatus, number> = {} as Record<DownloadStatus, number>;
-        for (const status of STATUS_KEYS) {
-            counts[status] = downloads.filter(d => d.status === status).length;
-        }
-        return counts;
-    }
-    
-    $: statusCounts = getStatusCounts();
     
     function getStatusColor(status: string): string {
         const colors: Record<string, string> = {
@@ -65,7 +52,7 @@
                 {#each Object.entries(statusCounts) as [status, count]}
                     {#if count > 0}
                         <span class="status-count" style="--status-color: {getStatusColor(status)}">
-                            {unwrapT('status.' + status.toLowerCase())}: {count}
+                            {$getT('status.' + status.toLowerCase())}: {count}
                         </span>
                     {/if}
                 {/each}
@@ -78,7 +65,7 @@
                     <section class="status-section">
                         <h4 class="status-section-title">
                             <span class="status-dot" style="background: {getStatusColor(status)}"></span>
-                            {unwrapT('status.' + status.toLowerCase())} ({statusDownloads.length})
+                            {$getT('status.' + status.toLowerCase())} ({statusDownloads.length})
                         </h4>
                         <div class="status-items">
                             {#each statusDownloads as download (download.id)}

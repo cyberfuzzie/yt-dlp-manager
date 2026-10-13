@@ -48,14 +48,6 @@ export const STATUS_KEYS: readonly DownloadStatus[] = [
     'CANCELLED',
 ];
 
-export const STATUS_LABELS: Record<DownloadStatus, string> = {
-    PENDING: 'Wartend',
-    DOWNLOADING: 'Wird heruntergeladen',
-    COMPLETED: 'Abgeschlossen',
-    FAILED: 'Fehlgeschlagen',
-    CANCELLED: 'Abgebrochen',
-};
-
 export const STATUS_COLORS: Record<DownloadStatus, string> = {
     PENDING: '#fbbf24',
     DOWNLOADING: '#3b82f6',
