@@ -1,6 +1,6 @@
 import { unwrapT, getLocale } from '#lib/i18n.ts';
 
-/** Translation function that accepts both svelte-i18n and unwrapT signatures. */
+/** Translation function compatible with both svelte-i18n's t() and unwrapT. */
 type TranslateFn = (
     id: string,
     values?: Record<string, unknown>,
@@ -28,10 +28,10 @@ export function formatRelativeTime(dateString: string, t: TranslateFn): string {
     const diffDays = Math.floor(diffHours / 24);
 
     if (diffSecs < 60) return t('utils.now');
-    if (diffMins < 60) return t('utils.minutesAgo', { n: diffMins });
-    if (diffHours < 24) return t('utils.hoursAgo', { n: diffHours });
-    if (diffDays === 1) return t('utils.dayAgo', { n: diffDays });
-    if (diffDays < 7) return t('utils.daysAgo', { n: diffDays });
+    if (diffMins < 60) return t('utils.minutesAgo', { values: { n: diffMins } });
+    if (diffHours < 24) return t('utils.hoursAgo', { values: { n: diffHours } });
+    if (diffDays === 1) return t('utils.dayAgo', { values: { n: diffDays } });
+    if (diffDays < 7) return t('utils.daysAgo', { values: { n: diffDays } });
     return formatDate(dateString);
 }
 

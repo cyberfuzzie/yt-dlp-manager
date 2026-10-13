@@ -53,17 +53,19 @@ export function getLocale(): string {
  * Normalised translation function – reads the latest t value on each call
  * so that locale changes are always respected.
  *
- * Accepts both raw values `{ n: 5 }` and svelte-i18n format `{ values: { n: 5 } }`
- * for compatibility with `formatRelativeTime` which uses `$getT`.
+ * Accepts raw values `{ n: 5 }` (standard component usage) or already-wrapped
+ * svelte-i18n format `{ values: { n: 5 } }` (when called by `formatRelativeTime`).
  */
 export const unwrapT: (id: string, values?: Record<string, unknown>) => string =
     (id, values) => {
         let fn: Function | undefined;
         t.subscribe((f) => (fn = f))();
-        // If values already has a 'values' key, it's in svelte-i18n format — pass through.
-        // Otherwise wrap it for svelte-i18n's t function.
-        const wrapped = values && 'values' in values ? values : { values };
-        return fn!(id, wrapped as any) as string;
+        // Detect whether values is already in svelte-i18n format { values: {...} }
+        // or raw { key: value }. svelte-i18n's t() expects { values: {...} }.
+        const args = values && 'values' in values
+            ? values          // already wrapped – pass through
+            : { values };     // raw – wrap for svelte-i18n
+        return fn!(id, args as any) as string;
     };
 
 /**
