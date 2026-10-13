@@ -237,4 +237,58 @@ describe('page', () => {
 		expect(createWebSocketMock).toHaveBeenCalledTimes(1);
 		errorSpy.mockRestore();
 	});
+
+	it('switches connection label when locale changes after render', async () => {
+		apiMock.getConfig.mockResolvedValue({ baseDirectory: '' });
+		apiMock.getDownloads.mockResolvedValue([]);
+
+		render(Page);
+		await waitFor(() => expect(createWebSocketMock).toHaveBeenCalled());
+		currentWs.onopen?.();
+		await waitFor(() => expect(screen.getByText('Verbunden')).toBeInTheDocument());
+
+		setLocale('en');
+		await waitFor(() => expect(screen.getByText('Connected')).toBeInTheDocument());
+
+		setLocale('de');
+	});
+
+	it('switches form labels when locale changes after render', async () => {
+		apiMock.getConfig.mockResolvedValue({ baseDirectory: '' });
+		apiMock.getDownloads.mockResolvedValue([]);
+
+		render(Page);
+		await waitFor(() => expect(screen.getByText('Neue Downloads hinzufügen')).toBeInTheDocument());
+
+		setLocale('en');
+		await waitFor(() => expect(screen.getByText('Add New Downloads')).toBeInTheDocument());
+
+		setLocale('de');
+	});
+
+	it('switches base-directory label when locale changes after render', async () => {
+		apiMock.getConfig.mockResolvedValue({ baseDirectory: '/downloads' });
+		apiMock.getDownloads.mockResolvedValue([]);
+
+		render(Page);
+		await waitFor(() => expect(screen.getByText('Basis-Verzeichnis:')).toBeInTheDocument());
+
+		setLocale('en');
+		await waitFor(() => expect(screen.getByText('Base Directory:')).toBeInTheDocument());
+
+		setLocale('de');
+	});
+
+	it('switches status labels when locale changes after render', async () => {
+		apiMock.getConfig.mockResolvedValue({ baseDirectory: '' });
+		apiMock.getDownloads.mockResolvedValue([makeDownload({ id: 'd1', status: 'PENDING' })]);
+
+		render(Page);
+		await waitFor(() => expect(screen.getByText('Wartend (1)')).toBeInTheDocument());
+
+		setLocale('en');
+		await waitFor(() => expect(screen.getByText('Pending (1)')).toBeInTheDocument());
+
+		setLocale('de');
+	});
 });

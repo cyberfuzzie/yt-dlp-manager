@@ -35,7 +35,7 @@
             try {
                 new URL(url);
             } catch {
-                urlErrors.push(unwrapT('form.urls.invalid', { url } as Parameters<typeof unwrapT>[1]));
+                urlErrors.push(unwrapT('form.urls.invalid', { url }));
                 return false;
             }
         }

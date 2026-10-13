@@ -4,7 +4,6 @@
     import { formatRelativeTime, formatBytes, formatDate, truncate, extractDomain } from '#lib/utils.ts';
     import { api } from '#lib/api.ts';
     import { t as getT } from 'svelte-i18n';
-    import { unwrapT } from '#lib/i18n.ts';
     import { locale as i18nLocale } from 'svelte-i18n';
     
     export let download!: DownloadInfo;

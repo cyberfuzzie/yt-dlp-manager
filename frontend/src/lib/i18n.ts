@@ -65,26 +65,8 @@ export const unwrapT: (id: string, values?: Record<string, unknown>) => string =
         return fn!(id, args as any) as string;
     };
 
-/**
- * Factory – call once per component to get a normalised t function.
- * The returned function reads the latest t value on each invocation.
- */
-export function createT() {
-    return (id: string, values?: Record<string, unknown>): string => {
-        let fn: Function | undefined;
-        t.subscribe((f) => (fn = f))();
-        return fn!(id, { values } as any) as string;
-    };
-}
-
 /** Available locales for the language switcher dropdown. */
 export const availableLocales = ['de', 'en'] as const;
-export type Locale = typeof availableLocales[number];
-
-/** Subscribe to the current locale. */
-export function subscribe(run: (value: string | null | undefined) => void): () => void {
-    return locale.subscribe(run);
-}
 
 /** Sync locale from localStorage and set document language attributes. */
 export function initLocale(): void {
