@@ -33,7 +33,7 @@
         navigator.clipboard.writeText(download.url);
     }
     
-    $: relativeTime = formatRelativeTime(download.createdAt, unwrapT);
+    $: relativeTime = formatRelativeTime(download.createdAt, $getT);
 
     $: createdDate = formatDate(download.createdAt, $locale === 'de' ? 'de-DE' : 'en-US');
     $: startedDate = download.startedAt
