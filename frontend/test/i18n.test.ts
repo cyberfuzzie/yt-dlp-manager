@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, vi, afterEach } from 'vitest';
-import { getLocale, setLocale, t, locale, availableLocales, unwrapT } from '#lib/i18n.ts';
+import { getLocale, setLocale, locale, availableLocales, unwrapT } from '#lib/i18n.ts';
 
 describe('locale store', () => {
 	beforeEach(() => setLocale('de'));
