@@ -1,11 +1,13 @@
 <script lang="ts">
     import type { DownloadRequest } from '#lib/types.ts';
     import { onMount } from 'svelte';
-    
+    import { t as getT } from 'svelte-i18n';
+    import { unwrapT } from '#lib/i18n.ts';
+
     export let onSubmit: (requests: DownloadRequest[]) => void;
     export let isLoading = false;
     export let baseDirectory = '';
-    
+
     let urls = '';
     let targetDirectory = '';
     let format = '';
@@ -25,7 +27,7 @@
         const urlList = parseUrls();
         
         if (urlList.length === 0) {
-            urlErrors.push('Mindestens eine URL ist erforderlich');
+            urlErrors.push(unwrapT('form.urls.required'));
             return false;
         }
         
@@ -33,7 +35,7 @@
             try {
                 new URL(url);
             } catch {
-                urlErrors.push(`Ungültige URL: ${url}`);
+                urlErrors.push(unwrapT('form.urls.invalid', { url }));
                 return false;
             }
         }
@@ -66,24 +68,18 @@
             urls = pastedText;
         }
     }
-    
-    function getUrlCount(): number {
-        return parseUrls().length;
-    }
 </script>
 
 <div class="download-form-container">
-    <h2>Neue Downloads hinzufügen</h2>
+    <h2>{$getT('form.title')}</h2>
     
     <form on:submit={handleSubmit} class="download-form">
         <div class="form-group">
-            <label for="urls">Video-URLs * (eine pro Zeile)</label>
+            <label for="urls">{$getT('form.urls.label')}</label>
             <textarea
                 id="urls"
                 bind:value={urls}
-                placeholder="https://youtube.com/watch?v=...
-https://twitch.tv/...
-https://youtube.com/watch?v=..."
+                placeholder={$getT('form.urls.placeholder')}
                 on:paste={handlePaste}
                 class:invalid={urlErrors.length > 0}
                 disabled={isLoading}
@@ -91,7 +87,12 @@ https://youtube.com/watch?v=..."
                 rows={4}
             ></textarea>
             {#if urls.trim()}
-                <span class="url-count">{getUrlCount()} URL{getUrlCount() !== 1 ? 's' : ''} erkannt</span>
+                    <span class="url-count">
+                        {parseUrls().length === 1 
+                            ? $getT('form.urls.urlCountSingular', { values: { n: parseUrls().length } })
+                            : $getT('form.urls.urlCountPlural', { values: { n: parseUrls().length } })
+                        }
+                    </span>
             {/if}
             {#if urlErrors.length > 0}
                 {#each urlErrors as error}
@@ -102,57 +103,57 @@ https://youtube.com/watch?v=..."
         
         <div class="form-row">
             <div class="form-group">
-                <label for="targetDirectory">Zielverzeichnis (relativ, für alle)</label>
+                <label for="targetDirectory">{$getT('form.directory.label')}</label>
                 <div class="input-with-prefix">
                     <span class="prefix">{baseDirectory}/</span>
                     <input
                         id="targetDirectory"
                         type="text"
                         bind:value={targetDirectory}
-                        placeholder="z.B. youtube/tutorials"
+                        placeholder={$getT('form.directory.placeholder')}
                         disabled={isLoading}
                     />
                 </div>
-                <span class="hint">Leer lassen für Basis-Verzeichnis</span>
+                <span class="hint">{$getT('form.directory.hint')}</span>
             </div>
         </div>
         
         <button type="button" class="toggle-advanced" on:click={() => showAdvanced = !showAdvanced}>
-            {showAdvanced ? 'Weniger Optionen' : 'Erweiterte Optionen'}
+            {showAdvanced ? $getT('form.advancedLess') : $getT('form.advanced')}
         </button>
         
         {#if showAdvanced}
             <div class="advanced-options">
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="format">Format</label>
+                        <label for="format">{$getT('form.format.label')}</label>
                         <input
                             id="format"
                             type="text"
                             bind:value={format}
-                            placeholder="z.B. bestvideo+bestaudio/best"
+                            placeholder={$getT('form.format.placeholder')}
                             disabled={isLoading}
                         />
-                        <span class="hint">yt-dlp Format-Selektor</span>
+                        <span class="hint">{$getT('form.format.hint')}</span>
                     </div>
                     
                     <div class="form-group">
-                        <label for="quality">Max. Qualität</label>
+                        <label for="quality">{$getT('form.quality.label')}</label>
                         <input
                             id="quality"
                             type="text"
                             bind:value={quality}
-                            placeholder="z.B. 1080, 720, 480"
+                            placeholder={$getT('form.quality.placeholder')}
                             disabled={isLoading}
                         />
-                        <span class="hint">Maximale Höhe in Pixeln</span>
+                        <span class="hint">{$getT('form.quality.hint')}</span>
                     </div>
                 </div>
             </div>
         {/if}
         
         <button type="submit" class="btn-primary" disabled={isLoading || urls.trim() === ''}>
-            {isLoading ? 'Wird hinzugefügt...' : 'Downloads starten'}
+            {isLoading ? $getT('form.submitting') : $getT('form.submit')}
         </button>
     </form>
 </div>

@@ -1,9 +1,12 @@
 import { fireEvent, render, screen, within } from '@testing-library/svelte';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DownloadList from '#lib/components/DownloadList.svelte';
+import { setLocale } from '#lib/i18n.ts';
 import { makeDownload } from '../helpers';
 
 describe('DownloadList', () => {
+	beforeEach(() => setLocale('de'));
+
 	it('shows an empty state when there are no downloads', () => {
 		render(DownloadList, { props: { downloads: [], onCancel: vi.fn() } });
 		expect(screen.getByText('Keine Downloads vorhanden')).toBeInTheDocument();
@@ -25,7 +28,7 @@ describe('DownloadList', () => {
 		expect(screen.getByText('Wartend: 2')).toBeInTheDocument();
 		expect(screen.getByText('Abgeschlossen: 1')).toBeInTheDocument();
 
-		// Sections appear in STATUS_LABELS order, only non-empty ones.
+		// Sections appear in status definition order, only non-empty ones.
 		const headings = screen.getAllByRole('heading', { level: 4 });
 		expect(headings.map((h) => h.textContent?.trim())).toEqual(['Wartend (2)', 'Abgeschlossen (1)']);
 		expect(screen.getByText('Wartend (2)')).toBeInTheDocument();

@@ -1,7 +1,9 @@
 <script lang="ts">
     import { onMount, onDestroy } from 'svelte';
+    import { t as getT } from 'svelte-i18n';
     import DownloadForm from '#lib/components/DownloadForm.svelte';
     import DownloadList from '#lib/components/DownloadList.svelte';
+    import LanguageSwitcher from '#lib/components/LanguageSwitcher.svelte';
     import { api, createWebSocket } from '#lib/api.ts';
     import type { DownloadInfo, DownloadRequest, ConfigResponse } from '#lib/types.ts';
     
@@ -10,6 +12,12 @@
     let isLoading = false;
     let ws: WebSocket | null = null;
     let connectionStatus: 'connecting' | 'connected' | 'disconnected' = 'connecting';
+    
+    // Reactive translations — $getT creates a dependency on the locale store,
+    // so these re-compute when the locale changes.
+    $: connectionLabel = connectionStatus === 'connected' ? $getT('connection.connected')
+        : connectionStatus === 'connecting' ? $getT('connection.connecting')
+        : $getT('connection.disconnected');
     
     async function loadConfig() {
         try {
@@ -37,7 +45,9 @@
             );
             // The WebSocket will update the list
         } catch (e) {
-            alert(`Fehler beim Hinzufügen: ${e instanceof Error ? e.message : 'Unbekannter Fehler'}`);
+            const addLabel = $getT('error.add');
+            const unknown = $getT('error.unknown');
+            alert(`${addLabel}: ${e instanceof Error ? e.message : unknown}`);
         } finally {
             isLoading = false;
         }
@@ -45,7 +55,9 @@
     
     function handleCancel(id: string) {
         api.cancelDownload(id).catch(e => {
-            alert(`Fehler beim Abbrechen: ${e instanceof Error ? e.message : 'Unbekannter Fehler'}`);
+            const cancelLabel = $getT('error.cancel');
+            const unknown = $getT('error.unknown');
+            alert(`${cancelLabel}: ${e instanceof Error ? e.message : unknown}`);
         });
     }
     
@@ -86,13 +98,14 @@
 <div class="app">
     <header class="header">
         <div class="header-content">
-            <h1>yt-dlp Manager</h1>
+            <h1>{$getT('app.title')}</h1>
             <div class="connection-indicator" class:connected={connectionStatus === 'connected'} class:disconnected={connectionStatus === 'disconnected'}>
                 <span class="dot"></span>
-                <span>{connectionStatus === 'connected' ? 'Verbunden' : connectionStatus === 'connecting' ? 'Verbinde...' : 'Getrennt'}</span>
+                <span>{connectionLabel}</span>
             </div>
+            <LanguageSwitcher />
         </div>
-        <p class="base-directory">Basis-Verzeichnis: <code>{baseDirectory}</code></p>
+        <p class="base-directory">{$getT('base.directory')}: <code>{baseDirectory}</code></p>
     </header>
     
     <main class="main">
@@ -129,6 +142,8 @@
         justify-content: space-between;
         align-items: center;
         margin-bottom: 0.5rem;
+        gap: 1rem;
+        flex-wrap: wrap;
     }
     
     .header h1 {

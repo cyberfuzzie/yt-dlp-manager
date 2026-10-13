@@ -1,7 +1,8 @@
 <script lang="ts">
     import type { DownloadStatus } from '#lib/types.ts';
-    import { STATUS_LABELS, STATUS_COLORS } from '#lib/types.ts';
-    
+    import { STATUS_COLORS } from '#lib/types.ts';
+    import { t as getT } from 'svelte-i18n';
+
     export let status: DownloadStatus = 'PENDING';
     export let showLabel = true;
 </script>
@@ -9,11 +10,11 @@
 <span 
     class="status-badge" 
     style="--status-color: {STATUS_COLORS[status]}"
-    title={STATUS_LABELS[status]}
+    title={$getT('status.' + status.toLowerCase())}
 >
     <span class="status-dot"></span>
     {#if showLabel}
-        <span class="status-label">{STATUS_LABELS[status]}</span>
+        <span class="status-label">{$getT('status.' + status.toLowerCase())}</span>
     {/if}
 </span>
 

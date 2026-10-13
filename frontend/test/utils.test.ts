@@ -1,9 +1,17 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import { extractDomain, formatBytes, formatDate, formatRelativeTime, truncate } from '#lib/utils.ts';
+import { setLocale, unwrapT } from '#lib/i18n.ts';
 
 describe('formatDate', () => {
-	it('formats an ISO string for the de-DE locale', () => {
+	it('formats an ISO string for the de-DE locale (default)', () => {
+		setLocale('de');
 		expect(formatDate('2026-01-01T00:00:00Z')).toBe('01.01.2026, 00:00');
+	});
+
+	it('formats an ISO string for en-US locale', () => {
+		setLocale('en');
+		expect(formatDate('2026-01-01T00:00:00Z')).toBe('01/01/2026, 12:00 AM');
+		setLocale('de');
 	});
 });
 
@@ -19,33 +27,81 @@ describe('formatRelativeTime', () => {
 
 	const ago = (ms: number) => new Date(Date.now() - ms).toISOString();
 
-	it('renders "gerade eben" for the last minute', () => {
-		expect(formatRelativeTime(ago(30_000))).toBe('gerade eben');
+	describe('German locale', () => {
+		beforeEach(() => setLocale('de'));
+
+		it('renders "gerade eben" for the last minute', () => {
+			const t = unwrapT;
+			expect(formatRelativeTime(ago(30_000), t)).toBe('gerade eben');
+		});
+
+		it('renders minutes', () => {
+			const t = unwrapT;
+			expect(formatRelativeTime(ago(5 * 60_000), t)).toBe('vor 5 Min.');
+		});
+
+		it('renders hours', () => {
+			const t = unwrapT;
+			expect(formatRelativeTime(ago(3 * 60 * 60_000), t)).toBe('vor 3 Std.');
+		});
+
+		it('renders a single day in the singular', () => {
+			const t = unwrapT;
+			expect(formatRelativeTime(ago(24 * 60 * 60_000), t)).toBe('vor 1 Tag');
+		});
+
+		it('renders several days in the plural', () => {
+			const t = unwrapT;
+			expect(formatRelativeTime(ago(3 * 24 * 60 * 60_000), t)).toBe('vor 3 Tagen');
+		});
+
+		it('falls back to an absolute date after a week', () => {
+			const t = unwrapT;
+			expect(formatRelativeTime(ago(10 * 24 * 60 * 60_000), t)).toBe('22.12.2025, 12:00');
+		});
 	});
 
-	it('renders minutes', () => {
-		expect(formatRelativeTime(ago(5 * 60_000))).toBe('vor 5 Min.');
-	});
+	describe('English locale', () => {
+		beforeEach(() => setLocale('en'));
 
-	it('renders hours', () => {
-		expect(formatRelativeTime(ago(3 * 60 * 60_000))).toBe('vor 3 Std.');
-	});
+		it('renders "just now" for the last minute', () => {
+			const t = unwrapT;
+			expect(formatRelativeTime(ago(30_000), t)).toBe('just now');
+		});
 
-	it('renders a single day in the singular', () => {
-		expect(formatRelativeTime(ago(24 * 60 * 60_000))).toBe('vor 1 Tag');
-	});
+		it('renders minutes', () => {
+			const t = unwrapT;
+			expect(formatRelativeTime(ago(5 * 60_000), t)).toBe('5 min ago');
+		});
 
-	it('renders several days in the plural', () => {
-		expect(formatRelativeTime(ago(3 * 24 * 60 * 60_000))).toBe('vor 3 Tagen');
-	});
+		it('renders hours', () => {
+			const t = unwrapT;
+			expect(formatRelativeTime(ago(3 * 60 * 60_000), t)).toBe('3 hr ago');
+		});
 
-	it('falls back to an absolute date after a week', () => {
-		expect(formatRelativeTime(ago(10 * 24 * 60 * 60_000))).toBe('22.12.2025, 12:00');
+		it('renders a single day in the singular', () => {
+			const t = unwrapT;
+			expect(formatRelativeTime(ago(24 * 60 * 60_000), t)).toBe('1 day ago');
+		});
+
+		it('renders several days in the plural', () => {
+			const t = unwrapT;
+			expect(formatRelativeTime(ago(3 * 24 * 60 * 60_000), t)).toBe('3 days ago');
+		});
+
+		it('falls back to an absolute date after a week', () => {
+			const t = unwrapT;
+			expect(formatRelativeTime(ago(10 * 24 * 60 * 60_000), t)).toBe('12/22/2025, 12:00 PM');
+		});
+
+		afterEach(() => setLocale('de'));
 	});
 });
 
 describe('formatBytes', () => {
-	it('handles missing values', () => {
+	beforeEach(() => setLocale('de'));
+
+	it('handles missing values (German)', () => {
 		expect(formatBytes(null)).toBe('Unbekannt');
 		expect(formatBytes(undefined as unknown as null)).toBe('Unbekannt');
 	});
@@ -57,10 +113,17 @@ describe('formatBytes', () => {
 	it('formats each unit', () => {
 		expect(formatBytes(512)).toBe('512 B');
 		expect(formatBytes(1024)).toBe('1 KB');
-		expect(formatBytes(1536)).toBe('1.5 KB');
+		expect(formatBytes(1536)).toBe('1,5 KB');
 		expect(formatBytes(1024 * 1024)).toBe('1 MB');
 		expect(formatBytes(1024 * 1024 * 1024)).toBe('1 GB');
 		expect(formatBytes(1024 ** 4)).toBe('1 TB');
+	});
+
+	it('handles missing values (English)', () => {
+		setLocale('en');
+		expect(formatBytes(null)).toBe('Unknown');
+		expect(formatBytes(1536)).toBe('1.5 KB');
+		setLocale('de');
 	});
 });
 

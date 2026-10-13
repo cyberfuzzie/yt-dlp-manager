@@ -1,8 +1,10 @@
 <script lang="ts">
     import type { DownloadInfo } from '#lib/types.ts';
     import StatusBadge from './StatusBadge.svelte';
-    import { formatRelativeTime, formatBytes, truncate, extractDomain } from '#lib/utils.ts';
+    import { formatRelativeTime, formatBytes, formatDate, truncate, extractDomain } from '#lib/utils.ts';
     import { api } from '#lib/api.ts';
+    import { t as getT } from 'svelte-i18n';
+    import { locale as i18nLocale } from 'svelte-i18n';
     
     export let download!: DownloadInfo;
     export let onCancel: (id: string) => void;
@@ -10,22 +12,41 @@
     let showDetails = false;
     let isCancelling = false;
     
-    function handleCancel() {
+    async function handleCancel() {
         if (isCancelling) return;
         isCancelling = true;
-        onCancel(download.id);
+        try {
+            await onCancel(download.id);
+        } finally {
+            isCancelling = false;
+        }
+    }
+    
+    function getProgressColor(): string {
+        const p = download.progress ?? 0;
+        if (p < 30) return '#fbbf24';
+        if (p < 70) return '#3b82f6';
+        return '#22c55e';
     }
     
     function copyUrl() {
         navigator.clipboard.writeText(download.url);
     }
     
-    function getProgressColor(): string {
-        if (download.status === 'COMPLETED') return '#22c55e';
-        if (download.status === 'FAILED') return '#ef4444';
-        if (download.status === 'CANCELLED') return '#6b7280';
-        return '#3b82f6';
-    }
+    $: relativeTime = formatRelativeTime(download.createdAt, $getT);
+
+    // Locale-aware date formatting — re-computed when locale or dates change.
+    $: localeCode = $i18nLocale === 'de' ? 'de-DE' : 'en-US';
+    $: createdDate = formatDate(download.createdAt, localeCode);
+    $: startedDate = download.startedAt
+        ? formatDate(download.startedAt, localeCode)
+        : undefined;
+    $: completedDate = download.completedAt
+        ? formatDate(download.completedAt, localeCode)
+        : undefined;
+
+    // Locale-aware byte formatting — re-computed when locale or fileSize changes.
+    $: formattedFileSize = formatBytes(download.fileSize, localeCode);
 </script>
 
 <article class="download-item" class:completed={download.status === 'COMPLETED'} class:failed={download.status === 'FAILED'}>
@@ -36,7 +57,7 @@
                 <span class="path">{truncate(download.url, 60)}</span>
             </div>
             <div class="item-meta">
-                <span class="created-at">Hinzugefügt: {formatRelativeTime(download.createdAt)}</span>
+                <span class="created-at">{$getT('downloadItem.added')}: {relativeTime}</span>
                 {#if download.targetDirectory}
                     <span class="target-dir">📁 {download.targetDirectory}</span>
                 {/if}
@@ -48,8 +69,8 @@
             <button 
                 class="btn-icon" 
                 on:click={() => showDetails = !showDetails}
-                aria-label={showDetails ? 'Details ausblenden' : 'Details anzeigen'}
-                title={showDetails ? 'Details ausblenden' : 'Details anzeigen'}
+                aria-label={$getT(showDetails ? 'downloadItem.hideDetails' : 'downloadItem.showDetails')}
+                title={$getT(showDetails ? 'downloadItem.hideDetails' : 'downloadItem.showDetails')}
             >
                 {showDetails ? '▲' : '▼'}
             </button>
@@ -58,8 +79,8 @@
                     class="btn-icon btn-danger" 
                     on:click={handleCancel}
                     disabled={isCancelling}
-                    aria-label="Download abbrechen"
-                    title="Download abbrechen"
+                    aria-label={$getT('downloadItem.cancel')}
+                    title={$getT('downloadItem.cancel')}
                 >
                     ✕
                 </button>
@@ -87,59 +108,59 @@
         <div class="completed-info">
             <span class="filename">📄 {download.filename}</span>
             {#if download.fileSize}
-                <span class="filesize">{formatBytes(download.fileSize)}</span>
+                <span class="filesize">{formattedFileSize}</span>
             {/if}
         </div>
     {:else if download.status === 'FAILED' && download.errorMessage}
         <div class="error-info">
             <span class="error-icon">⚠</span>
             <span class="error-text">{download.errorMessage}</span>
-            <button class="btn-copy" on:click={copyUrl} title="URL kopieren">📋</button>
+            <button class="btn-copy" on:click={copyUrl} title={$getT('downloadItem.copyUrl')}>📋</button>
         </div>
     {/if}
     
     {#if showDetails}
         <div class="details-panel">
             <div class="detail-row">
-                <span class="detail-label">ID:</span>
+                <span class="detail-label">{$getT('downloadItem.idLabel')}</span>
                 <span class="detail-value mono">{download.id}</span>
             </div>
             <div class="detail-row">
-                <span class="detail-label">URL:</span>
+                <span class="detail-label">{$getT('downloadItem.urlLabel')}</span>
                 <span class="detail-value url" title={download.url}>{download.url}</span>
             </div>
             {#if download.targetDirectory}
                 <div class="detail-row">
-                    <span class="detail-label">Zielverzeichnis:</span>
+                    <span class="detail-label">{$getT('downloadItem.directoryLabel')}</span>
                     <span class="detail-value">{download.targetDirectory}</span>
                 </div>
             {/if}
             {#if download.format}
                 <div class="detail-row">
-                    <span class="detail-label">Format:</span>
+                    <span class="detail-label">{$getT('downloadItem.formatLabel')}</span>
                     <span class="detail-value mono">{download.format}</span>
                 </div>
             {/if}
             {#if download.quality}
                 <div class="detail-row">
-                    <span class="detail-label">Qualität:</span>
+                    <span class="detail-label">{$getT('downloadItem.qualityLabel')}</span>
                     <span class="detail-value mono">{download.quality}</span>
                 </div>
             {/if}
             <div class="detail-row">
-                <span class="detail-label">Erstellt:</span>
-                <span class="detail-value">{new Date(download.createdAt).toLocaleString('de-DE')}</span>
+                <span class="detail-label">{$getT('downloadItem.createdLabel')}</span>
+                <span class="detail-value">{createdDate}</span>
             </div>
             {#if download.startedAt}
                 <div class="detail-row">
-                    <span class="detail-label">Gestartet:</span>
-                    <span class="detail-value">{new Date(download.startedAt).toLocaleString('de-DE')}</span>
+                    <span class="detail-label">{$getT('downloadItem.startedLabel')}</span>
+                    <span class="detail-value">{startedDate}</span>
                 </div>
             {/if}
             {#if download.completedAt}
                 <div class="detail-row">
-                    <span class="detail-label">Beendet:</span>
-                    <span class="detail-value">{new Date(download.completedAt).toLocaleString('de-DE')}</span>
+                    <span class="detail-label">{$getT('downloadItem.completedLabel')}</span>
+                    <span class="detail-value">{completedDate}</span>
                 </div>
             {/if}
         </div>
