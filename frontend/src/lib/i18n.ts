@@ -52,14 +52,16 @@ export function getLocale(): string {
  */
 export const unwrapT: (id: string, values?: Record<string, unknown>) => string =
     (id, values) => {
-        let fn: Function | undefined;
-        t.subscribe((f) => (fn = f))();
+        let fn: ((id: string, options?: Record<string, unknown>) => string) | undefined;
+        t.subscribe((f) => {
+            fn = f;
+        })();
         // Detect whether values is already in svelte-i18n format { values: {...} }
         // or raw { key: value }. svelte-i18n's t() expects { values: {...} }.
         const args = values && 'values' in values
             ? values          // already wrapped – pass through
             : { values };     // raw – wrap for svelte-i18n
-        return fn!(id, args as any) as string;
+        return fn?.(id, args) ?? id;
     };
 
 /** Available locales for the language switcher dropdown. */

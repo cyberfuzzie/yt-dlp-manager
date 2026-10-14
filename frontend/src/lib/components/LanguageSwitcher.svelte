@@ -18,7 +18,7 @@
     class="lang-switcher"
     aria-label="Language"
 >
-    {#each availableLocales as loc}
+    {#each availableLocales as loc (loc)}
         <option value={loc} selected={$i18nLocale === loc}>{localeNames[loc]}</option>
     {/each}
 </select>

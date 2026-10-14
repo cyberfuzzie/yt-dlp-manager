@@ -95,7 +95,7 @@
                     </span>
             {/if}
             {#if urlErrors.length > 0}
-                {#each urlErrors as error}
+                {#each urlErrors as error, index (index)}
                     <span class="error-message">{error}</span>
                 {/each}
             {/if}

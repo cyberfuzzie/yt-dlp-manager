@@ -49,7 +49,7 @@
         <div class="list-header">
             <h3>{$getT('downloadList.header', { values: { count: downloads.length } })}</h3>
             <div class="status-summary">
-                {#each Object.entries(statusCounts) as [status, count]}
+                {#each Object.entries(statusCounts) as [status, count] (status)}
                     {#if count > 0}
                         <span class="status-count" style="--status-color: {getStatusColor(status)}">
                             {$getT('status.' + status.toLowerCase())}: {count}
@@ -60,7 +60,7 @@
         </div>
         
         <div class="downloads-container">
-            {#each Object.entries(downloadsByStatus) as [status, statusDownloads]}
+            {#each Object.entries(downloadsByStatus) as [status, statusDownloads] (status)}
                 {#if statusDownloads.length > 0}
                     <section class="status-section">
                         <h4 class="status-section-title">
