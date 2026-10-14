@@ -176,11 +176,11 @@ describe('DownloadForm', () => {
 		]);
 	});
 
-	it('custom input is hidden unless custom is selected', () => {
+	it('custom input is hidden unless custom is selected', async () => {
 		render(DownloadForm, { props: { onSubmit: vi.fn() } });
 		expect(screen.queryByLabelText('Eigenes yt-dlp-Muster')).not.toBeInTheDocument();
 		const select = screen.getByLabelText('Dateinamen-Muster (für alle)');
-		fireEvent.change(select, { target: { value: 'custom' } });
+		await fireEvent.change(select, { target: { value: 'custom' } });
 		expect(screen.getByLabelText('Eigenes yt-dlp-Muster')).toBeInTheDocument();
 	});
 });
