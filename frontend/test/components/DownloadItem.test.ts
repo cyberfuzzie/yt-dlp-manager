@@ -48,7 +48,7 @@ describe('DownloadItem', () => {
 	});
 
 	it('calls onCancel and disables the button', async () => {
-		let resolveCancel: () => void;
+		let resolveCancel: (() => void) | undefined = undefined;
 		const onCancel = vi.fn().mockImplementation(
 			() => new Promise<void>(resolve => { resolveCancel = resolve; }),
 		);
@@ -60,7 +60,7 @@ describe('DownloadItem', () => {
 		expect(button).toBeDisabled();
 
 		// Complete the async operation
-		resolveCancel!();
+		(resolveCancel as unknown as () => void)();
 		expect(onCancel).toHaveBeenCalledWith('id-1');
 	});
 

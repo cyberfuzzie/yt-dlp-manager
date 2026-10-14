@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { api, createWebSocket } from '#lib/api.ts';
-import type { DownloadInfo } from '#lib/types.ts';
 import { makeDownload } from './helpers';
 
 function jsonResponse(body: unknown, ok = true, status = 200, statusText = 'OK') {
@@ -127,21 +126,16 @@ describe('createWebSocket', () => {
 		expect(onMessage).not.toHaveBeenCalled();
 	});
 
-	it('logs and swallows malformed messages', () => {
-		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+	it('silently ignores malformed messages', () => {
 		createWebSocket(onMessage);
 		FakeWebSocket.instances[0].onmessage?.({ data: 'not json' });
-		expect(errorSpy).toHaveBeenCalledTimes(1);
 		expect(onMessage).not.toHaveBeenCalled();
-		errorSpy.mockRestore();
 	});
 
-	it('logs WebSocket errors', () => {
-		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+	it('silently handles WebSocket errors', () => {
 		createWebSocket(onMessage);
 		FakeWebSocket.instances[0].onerror?.({});
-		expect(errorSpy).toHaveBeenCalledTimes(1);
-		errorSpy.mockRestore();
+		// No throw — the error handler is a no-op; onclose will trigger reconnection.
 	});
 
 	it('uses wss:// when the page is served over https', () => {

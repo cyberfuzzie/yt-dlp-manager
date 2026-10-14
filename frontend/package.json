@@ -14,7 +14,8 @@
     "test:watch": "svelte-kit sync && vitest",
     "test:coverage": "svelte-kit sync && vitest run --coverage",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-    "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
+    "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+    "lint": "eslint src test"
   },
   "packageManager": "pnpm@12.11.2",
   "devDependencies": {
@@ -24,10 +25,15 @@
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/svelte": "^5.4.2",
+    "@typescript-eslint/eslint-plugin": "^8.71.2",
+    "@typescript-eslint/parser": "^8.71.2",
     "@vitest/coverage-v8": "^5.0.3",
+    "eslint": "^10.12.0",
+    "eslint-plugin-svelte": "^3.23.1",
     "jsdom": "^30.1.2",
     "svelte": "^5.57.2",
     "svelte-check": "^4.7.6",
+    "svelte-eslint-parser": "^1.9.0",
     "typescript": "^6.0.3",
     "vite": "^8.3.3",
     "vitest": "^5.0.3"

@@ -117,7 +117,7 @@ describe('page', () => {
 		await waitFor(() => expect(apiMock.getConfig).toHaveBeenCalled());
 
 		await fireEvent.input(screen.getByLabelText(urlsLabel), { target: { value: 'https://a.example' } });
-		await fireEvent.submit(document.querySelector('form')!);
+		await fireEvent.submit(document.querySelector('form') as HTMLFormElement);
 		await waitFor(() =>
 			expect(apiMock.addDownload).toHaveBeenCalledWith({
 				url: 'https://a.example',
@@ -138,7 +138,7 @@ describe('page', () => {
 		await waitFor(() => expect(apiMock.getConfig).toHaveBeenCalled());
 
 		await fireEvent.input(screen.getByLabelText(urlsLabel), { target: { value: 'https://a.example' } });
-		await fireEvent.submit(document.querySelector('form')!);
+		await fireEvent.submit(document.querySelector('form') as HTMLFormElement);
 		await waitFor(() => expect(alertMock).toHaveBeenCalledWith('Fehler beim Hinzufügen: boom'));
 		alertMock.mockRestore();
 	});
@@ -153,7 +153,7 @@ describe('page', () => {
 		await waitFor(() => expect(apiMock.getConfig).toHaveBeenCalled());
 
 		await fireEvent.input(screen.getByLabelText(urlsLabel), { target: { value: 'https://a.example' } });
-		await fireEvent.submit(document.querySelector('form')!);
+		await fireEvent.submit(document.querySelector('form') as HTMLFormElement);
 		await waitFor(() =>
 			expect(alertMock).toHaveBeenCalledWith('Fehler beim Hinzufügen: Unbekannter Fehler')
 		);

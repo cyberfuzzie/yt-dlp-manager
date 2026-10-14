@@ -3,6 +3,8 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN corepack enable pnpm && pnpm config set minimum-release-age 0 && pnpm install --shamefully-hoist
 COPY . .
+# `lint` runs TypeScript-eslint checks — errors fail the build.
+RUN pnpm run lint
 # `test:coverage` runs the unit tests and enforces the 80% coverage gate.
 RUN pnpm run test:coverage
 RUN pnpm exec vite build

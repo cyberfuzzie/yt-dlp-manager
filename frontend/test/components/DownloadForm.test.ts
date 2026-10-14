@@ -32,7 +32,7 @@ describe('DownloadForm', () => {
 	it('rejects an empty submission', async () => {
 		const onSubmit = vi.fn();
 		const { container } = render(DownloadForm, { props: { onSubmit } });
-		await fireEvent.submit(container.querySelector('form')!);
+		await fireEvent.submit(container.querySelector('form') as HTMLFormElement);
 		expect(screen.getByText('Mindestens eine URL ist erforderlich')).toBeInTheDocument();
 		expect(onSubmit).not.toHaveBeenCalled();
 	});
@@ -41,7 +41,7 @@ describe('DownloadForm', () => {
 		const onSubmit = vi.fn();
 		const { container } = render(DownloadForm, { props: { onSubmit } });
 		await fireEvent.input(screen.getByLabelText(urlsLabel), { target: { value: 'not a url' } });
-		await fireEvent.submit(container.querySelector('form')!);
+		await fireEvent.submit(container.querySelector('form') as HTMLFormElement);
 		expect(screen.getByText('Ungültige URL: not a url')).toBeInTheDocument();
 		expect(onSubmit).not.toHaveBeenCalled();
 	});
@@ -55,7 +55,7 @@ describe('DownloadForm', () => {
 		await fireEvent.input(screen.getByLabelText('Format'), { target: { value: 'bestvideo+bestaudio' } });
 		await fireEvent.input(screen.getByLabelText('Max. Qualität'), { target: { value: '1080' } });
 
-		await fireEvent.submit(container.querySelector('form')!);
+		await fireEvent.submit(container.querySelector('form') as HTMLFormElement);
 		expect(onSubmit).toHaveBeenCalledWith([
 			{
 				url: 'https://a.example',

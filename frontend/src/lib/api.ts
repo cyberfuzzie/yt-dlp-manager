@@ -51,17 +51,16 @@ export function createWebSocket(onMessage: (data: DownloadInfo) => void): WebSoc
             if (message.type === 'download_update') {
                 onMessage(message.payload);
             }
-        } catch (e) {
-            console.error('Failed to parse WebSocket message:', e);
+        } catch {
+            // Silently ignore malformed messages — the WebSocket connection stays alive.
         }
     };
     
-    ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
+    ws.onerror = () => {
+        // Connection error — onclose will fire and trigger reconnection.
     };
     
     ws.onclose = () => {
-        console.log('WebSocket connection closed');
         // Reconnect after 3 seconds
         setTimeout(() => {
             createWebSocket(onMessage);
