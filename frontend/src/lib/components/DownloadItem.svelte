@@ -147,6 +147,12 @@
                     <span class="detail-value mono">{download.quality}</span>
                 </div>
             {/if}
+            {#if download.filenamePattern}
+                <div class="detail-row">
+                    <span class="detail-label">{$getT('downloadItem.filenamePatternLabel')}</span>
+                    <span class="detail-value mono">{download.filenamePattern}</span>
+                </div>
+            {/if}
             <div class="detail-row">
                 <span class="detail-label">{$getT('downloadItem.createdLabel')}</span>
                 <span class="detail-value">{createdDate}</span>

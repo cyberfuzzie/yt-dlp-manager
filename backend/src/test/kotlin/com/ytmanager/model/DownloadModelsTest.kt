@@ -19,6 +19,7 @@ class DownloadModelsTest {
             targetDirectory = "sub",
             format = "mp4",
             quality = "720",
+            filenamePattern = "%(id)s",
         )
         val encoded = json.encodeToString(DownloadRequest.serializer(), full)
         assertEquals(full, json.decodeFromString(DownloadRequest.serializer(), encoded))
@@ -27,6 +28,7 @@ class DownloadModelsTest {
         assertNull(defaults.targetDirectory)
         assertNull(defaults.format)
         assertNull(defaults.quality)
+        assertNull(defaults.filenamePattern)
     }
 
     @Test
@@ -41,6 +43,7 @@ class DownloadModelsTest {
         assertNull(info.filename)
         assertNull(info.fileSize)
         assertNull(info.errorMessage)
+        assertNull(info.filenamePattern)
         assertNotNull(info.createdAt)
         assertNull(info.startedAt)
         assertNull(info.completedAt)

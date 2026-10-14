@@ -124,6 +124,7 @@ describe('page', () => {
 				targetDirectory: undefined,
 				format: undefined,
 				quality: undefined,
+				filenamePattern: undefined,
 			})
 		);
 	});

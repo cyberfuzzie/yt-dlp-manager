@@ -5,6 +5,7 @@ A video download manager (YouTube, Twitch, etc.) with a **Kotlin/Ktor backend** 
 ## Features
 
 - 🎬 Video downloads from YouTube, Twitch and many other platforms
+- 🗂 Configurable filename pattern (free text or presets)
 - 📁 Configurable base download directory
 - 📂 Optional relative target directory per download
 - 📊 Real-time overview of all downloads (WebSocket)
@@ -70,11 +71,11 @@ APP_DOWNLOAD_BASE_DIRECTORY=/downloads
 
 ## Usage
 
-1. **Add download**: enter one or more URLs (one per line), optionally specify a target directory relative to the base directory
+1. **Add download**: enter one or more URLs (one per line), optionally specify a target directory relative to the base directory and a filename pattern (default, preset, or custom yt-dlp template)
 2. **Advanced options**: format selector and max. quality
 3. **Overview**: all downloads with status, progress, speed and ETA
 4. **Cancel**: running downloads can be cancelled
-5. **Details**: expand for full metadata
+5. **Details**: expand for full metadata including the filename pattern used
 
 ## API endpoints
 
@@ -153,7 +154,9 @@ yt-dlp-manager/
 ### yt-dlp integration
 The `DownloadService` builds yt-dlp commands dynamically:
 - `--no-playlist` (single video only)
-- `--restrict-filenames` (safe filenames)
+- `--restrict-filenames` is used only with the default output template; custom patterns skip it so Unicode and spaces are preserved
+- `--output` is configurable — the user can choose from presets ("Default", "Video ID + Title", "Date + Title") or enter a free-text yt-dlp output template
+- `%(ext)s` is appended automatically when a custom pattern omits it, because yt-dlp requires the placeholder
 - progress parsing via `--progress-template`
 - format/quality options are passed through
 

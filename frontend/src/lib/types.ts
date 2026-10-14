@@ -3,6 +3,7 @@ export interface DownloadRequest {
     targetDirectory?: string;
     format?: string;
     quality?: string;
+    filenamePattern?: string;
 }
 
 export type DownloadStatus = 'PENDING' | 'DOWNLOADING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
@@ -13,6 +14,7 @@ export interface DownloadInfo {
     targetDirectory: string | null;
     format: string | null;
     quality: string | null;
+    filenamePattern: string | null;
     status: DownloadStatus;
     progress: number;
     speed: string | null;

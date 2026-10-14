@@ -62,6 +62,7 @@ describe('DownloadForm', () => {
 				targetDirectory: 'videos',
 				format: 'bestvideo+bestaudio',
 				quality: '1080',
+				filenamePattern: undefined,
 			},
 		]);
 		expect(screen.queryByText('1 URL erkannt')).not.toBeInTheDocument();
@@ -100,5 +101,86 @@ describe('DownloadForm', () => {
 		expect(screen.getByText('Wird hinzugefügt...')).toBeInTheDocument();
 		expect(screen.getByLabelText(urlsLabel)).toBeDisabled();
 		expect(container.querySelector('button[type="submit"]')).toBeDisabled();
+	});
+
+	it('selecting "Video-ID + Titel" sends the preset pattern', async () => {
+		const onSubmit = vi.fn();
+		const { container } = render(DownloadForm, { props: { onSubmit } });
+		await fireEvent.input(screen.getByLabelText(urlsLabel), { target: { value: 'https://a.example\n' } });
+		const select = screen.getByLabelText('Dateinamen-Muster (für alle)');
+		await fireEvent.change(select, { target: { value: 'idTitle' } });
+		await fireEvent.submit(container.querySelector('form') as HTMLFormElement);
+		expect(onSubmit).toHaveBeenCalledWith([
+			{
+				url: 'https://a.example',
+				targetDirectory: undefined,
+				format: undefined,
+				quality: undefined,
+				filenamePattern: '%(id)s %(title)s.%(ext)s',
+			},
+		]);
+	});
+
+	it('selecting "Datum + Titel" sends the preset pattern', async () => {
+		const onSubmit = vi.fn();
+		const { container } = render(DownloadForm, { props: { onSubmit } });
+		await fireEvent.input(screen.getByLabelText(urlsLabel), { target: { value: 'https://a.example\n' } });
+		const select = screen.getByLabelText('Dateinamen-Muster (für alle)');
+		await fireEvent.change(select, { target: { value: 'dateTitle' } });
+		await fireEvent.submit(container.querySelector('form') as HTMLFormElement);
+		expect(onSubmit).toHaveBeenCalledWith([
+			{
+				url: 'https://a.example',
+				targetDirectory: undefined,
+				format: undefined,
+				quality: undefined,
+				filenamePattern: '%(upload_date>%Y-%m-%d)s %(title)s.%(ext)s',
+			},
+		]);
+	});
+
+	it('custom pattern sends user input', async () => {
+		const onSubmit = vi.fn();
+		const { container } = render(DownloadForm, { props: { onSubmit } });
+		await fireEvent.input(screen.getByLabelText(urlsLabel), { target: { value: 'https://a.example\n' } });
+		const select = screen.getByLabelText('Dateinamen-Muster (für alle)');
+		await fireEvent.change(select, { target: { value: 'custom' } });
+		await fireEvent.input(screen.getByLabelText('Eigenes yt-dlp-Muster'), { target: { value: '%(title)s' } });
+		await fireEvent.submit(container.querySelector('form') as HTMLFormElement);
+		expect(onSubmit).toHaveBeenCalledWith([
+			{
+				url: 'https://a.example',
+				targetDirectory: undefined,
+				format: undefined,
+				quality: undefined,
+				filenamePattern: '%(title)s',
+			},
+		]);
+	});
+
+	it('empty custom pattern submits undefined', async () => {
+		const onSubmit = vi.fn();
+		const { container } = render(DownloadForm, { props: { onSubmit } });
+		await fireEvent.input(screen.getByLabelText(urlsLabel), { target: { value: 'https://a.example\n' } });
+		const select = screen.getByLabelText('Dateinamen-Muster (für alle)');
+		await fireEvent.change(select, { target: { value: 'custom' } });
+		await fireEvent.submit(container.querySelector('form') as HTMLFormElement);
+		expect(onSubmit).toHaveBeenCalledWith([
+			{
+				url: 'https://a.example',
+				targetDirectory: undefined,
+				format: undefined,
+				quality: undefined,
+				filenamePattern: undefined,
+			},
+		]);
+	});
+
+	it('custom input is hidden unless custom is selected', () => {
+		render(DownloadForm, { props: { onSubmit: vi.fn() } });
+		expect(screen.queryByLabelText('Eigenes yt-dlp-Muster')).not.toBeInTheDocument();
+		const select = screen.getByLabelText('Dateinamen-Muster (für alle)');
+		fireEvent.change(select, { target: { value: 'custom' } });
+		expect(screen.getByLabelText('Eigenes yt-dlp-Muster')).toBeInTheDocument();
 	});
 });

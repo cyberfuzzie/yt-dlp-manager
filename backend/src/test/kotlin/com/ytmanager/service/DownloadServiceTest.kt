@@ -149,4 +149,84 @@ class DownloadServiceTest {
         }
         assertTrue(cancelled, "expected the running process to be cancelled")
     }
+
+    private fun readArgs(dir: File = tempDir): List<String> =
+        File(dir, "args.txt").readLines().filter { it.isNotEmpty() }
+
+    @Test
+    fun `default pattern includes --restrict-filenames and the default output template`() = runBlocking {
+        val script = fakeYtDlp(
+            tempDir,
+            "printf '%s\\n' \"$@\" > args.txt\necho '[download] Destination: out.mp4'\nexit 0"
+        )
+        val service = service(script)
+        val download = service.addDownload(DownloadRequest(url = "https://example.com/v"))
+
+        awaitStatus(service, download.id) { it == DownloadStatus.COMPLETED }
+
+        val args = readArgs()
+        assertTrue(args.contains("--restrict-filenames"))
+        val outputIdx = args.indexOf("--output")
+        assertEquals("%(title)s [%(id)s].%(ext)s", args[outputIdx + 1])
+    }
+
+    @Test
+    fun `custom pattern without ext appends %(ext)s and omits --restrict-filenames`() = runBlocking {
+        val script = fakeYtDlp(
+            tempDir,
+            "printf '%s\\n' \"$@\" > args.txt\necho '[download] Destination: out.mp4'\nexit 0"
+        )
+        val service = service(script)
+        val download = service.addDownload(
+            DownloadRequest(url = "https://example.com/v", filenamePattern = "%(id)s %(title)s")
+        )
+
+        awaitStatus(service, download.id) { it == DownloadStatus.COMPLETED }
+
+        val args = readArgs()
+        assertFalse(args.contains("--restrict-filenames"))
+        val outputIdx = args.indexOf("--output")
+        assertEquals("%(id)s %(title)s.%(ext)s", args[outputIdx + 1])
+    }
+
+    @Test
+    fun `custom pattern with ext and whitespace trims and keeps ext`() = runBlocking {
+        val script = fakeYtDlp(
+            tempDir,
+            "printf '%s\\n' \"$@\" > args.txt\necho '[download] Destination: out.mp4'\nexit 0"
+        )
+        val service = service(script)
+        val download = service.addDownload(
+            DownloadRequest(
+                url = "https://example.com/v",
+                filenamePattern = "  %(upload_date>%Y-%m-%d)s %(title)s.%(ext)s  "
+            )
+        )
+
+        awaitStatus(service, download.id) { it == DownloadStatus.COMPLETED }
+
+        val args = readArgs()
+        assertFalse(args.contains("--restrict-filenames"))
+        val outputIdx = args.indexOf("--output")
+        assertEquals("%(upload_date>%Y-%m-%d)s %(title)s.%(ext)s", args[outputIdx + 1])
+    }
+
+    @Test
+    fun `blank custom pattern falls back to the default`() = runBlocking {
+        val script = fakeYtDlp(
+            tempDir,
+            "printf '%s\\n' \"$@\" > args.txt\necho '[download] Destination: out.mp4'\nexit 0"
+        )
+        val service = service(script)
+        val download = service.addDownload(
+            DownloadRequest(url = "https://example.com/v", filenamePattern = "   ")
+        )
+
+        awaitStatus(service, download.id) { it == DownloadStatus.COMPLETED }
+
+        val args = readArgs()
+        assertTrue(args.contains("--restrict-filenames"))
+        val outputIdx = args.indexOf("--output")
+        assertEquals("%(title)s [%(id)s].%(ext)s", args[outputIdx + 1])
+    }
 }

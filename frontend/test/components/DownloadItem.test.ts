@@ -70,6 +70,7 @@ describe('DownloadItem', () => {
 				targetDirectory: '/media',
 				format: 'bestvideo+bestaudio',
 				quality: '1080',
+				filenamePattern: '%(id)s',
 				startedAt: '2026-01-01T12:01:00Z',
 				completedAt: '2026-01-01T12:05:00Z',
 			})
@@ -82,6 +83,8 @@ describe('DownloadItem', () => {
 		expect(screen.getByText('Zielverzeichnis:')).toBeInTheDocument();
 		expect(screen.getByText('Format:')).toBeInTheDocument();
 		expect(screen.getByText('Qualität:')).toBeInTheDocument();
+		expect(screen.getByText('Dateinamen-Muster:')).toBeInTheDocument();
+		expect(screen.getByText('%(id)s')).toBeInTheDocument();
 		expect(screen.getByText('Erstellt:')).toBeInTheDocument();
 		expect(screen.getByText('Gestartet:')).toBeInTheDocument();
 		expect(screen.getByText('Beendet:')).toBeInTheDocument();
@@ -112,6 +115,7 @@ describe('DownloadItem', () => {
 			targetDirectory: null,
 			format: null,
 			quality: null,
+			filenamePattern: null,
 			status: 'DOWNLOADING',
 			progress: undefined as unknown as number,
 			speed: null,
