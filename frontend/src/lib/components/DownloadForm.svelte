@@ -14,6 +14,13 @@
     let quality = '';
     let showAdvanced = false;
     let urlErrors: string[] = [];
+    let filenamePreset = 'default';
+    let customFilenamePattern = '';
+    const FILENAME_PRESETS: Record<string, string | undefined> = {
+        default: undefined,
+        idTitle: '%(id)s %(title)s.%(ext)s',
+        dateTitle: '%(upload_date>%Y-%m-%d)s %(title)s.%(ext)s',
+    };
     
     function parseUrls(): string[] {
         return urls
@@ -47,11 +54,15 @@
         if (!validateUrls()) return;
         
         const urlList = parseUrls();
+        const filenamePattern = filenamePreset === 'custom'
+            ? customFilenamePattern.trim() || undefined
+            : FILENAME_PRESETS[filenamePreset];
         const requests: DownloadRequest[] = urlList.map(url => ({
             url: url.trim(),
             targetDirectory: targetDirectory.trim() || undefined,
             format: format.trim() || undefined,
             quality: quality.trim() || undefined,
+            filenamePattern,
         }));
         
         onSubmit(requests);
@@ -60,6 +71,8 @@
         targetDirectory = '';
         format = '';
         quality = '';
+        filenamePreset = 'default';
+        customFilenamePattern = '';
     }
     
     function handlePaste(event: ClipboardEvent) {
@@ -117,6 +130,29 @@
                 <span class="hint">{$getT('form.directory.hint')}</span>
             </div>
         </div>
+        
+        <div class="form-group">
+            <label for="filenamePreset">{$getT('form.filenamePattern.label')}</label>
+            <select id="filenamePreset" bind:value={filenamePreset} disabled={isLoading}>
+                <option value="default">{$getT('form.filenamePattern.default')}</option>
+                <option value="idTitle">{$getT('form.filenamePattern.idTitle')}</option>
+                <option value="dateTitle">{$getT('form.filenamePattern.dateTitle')}</option>
+                <option value="custom">{$getT('form.filenamePattern.custom')}</option>
+            </select>
+            <span class="hint">{$getT('form.filenamePattern.hint')}</span>
+        </div>
+        {#if filenamePreset === 'custom'}
+            <div class="form-group">
+                <label for="filenamePattern">{$getT('form.filenamePattern.customLabel')}</label>
+                <input
+                    id="filenamePattern"
+                    type="text"
+                    bind:value={customFilenamePattern}
+                    placeholder={$getT('form.filenamePattern.placeholder')}
+                    disabled={isLoading}
+                />
+            </div>
+        {/if}
         
         <button type="button" class="toggle-advanced" on:click={() => showAdvanced = !showAdvanced}>
             {showAdvanced ? $getT('form.advancedLess') : $getT('form.advanced')}
@@ -241,13 +277,25 @@
         transition: border-color 0.2s, box-shadow 0.2s;
     }
     
-    input:focus {
+    select {
+        padding: 0.625rem 0.875rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        font-size: 0.9375rem;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    
+    input:focus,
+    select:focus {
         outline: none;
         border-color: var(--accent);
         box-shadow: 0 0 0 3px rgba(233, 69, 96, 0.2);
     }
     
-    input:disabled {
+    input:disabled,
+    select:disabled {
         opacity: 0.6;
         cursor: not-allowed;
     }

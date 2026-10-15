@@ -15,6 +15,7 @@ data class DownloadRequest(
     val targetDirectory: String? = null,
     val format: String? = null,
     val quality: String? = null,
+    val filenamePattern: String? = null,
 )
 
 @Serializable
@@ -24,6 +25,7 @@ data class DownloadInfo(
     val targetDirectory: String?,
     val format: String?,
     val quality: String?,
+    val filenamePattern: String? = null,
     val status: DownloadStatus = DownloadStatus.PENDING,
     val progress: Double = 0.0,
     val speed: String? = null,

@@ -8,6 +8,7 @@ export function makeDownload(overrides: Partial<DownloadInfo> = {}): DownloadInf
 		targetDirectory: null,
 		format: null,
 		quality: null,
+		filenamePattern: null,
 		status: 'PENDING',
 		progress: 0,
 		speed: null,

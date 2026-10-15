@@ -35,6 +35,7 @@ class DownloadService(
             targetDirectory = request.targetDirectory,
             format = request.format,
             quality = request.quality,
+            filenamePattern = request.filenamePattern,
         )
         
         downloads[download.id] = download
@@ -134,9 +135,13 @@ class DownloadService(
         val command = mutableListOf<String>(ytDlpExecutable)
         
         command.add("--no-playlist")
-        command.add("--restrict-filenames")
+
+        val customPattern = download.filenamePattern?.takeIf { it.isNotBlank() }
+        if (customPattern == null) {
+            command.add("--restrict-filenames")
+        }
         command.add("--output")
-        command.add("%(title)s [%(id)s].%(ext)s")
+        command.add(normalizeOutputTemplate(customPattern ?: DEFAULT_OUTPUT_TEMPLATE))
         
         download.format?.let { command.add("--format"); command.add(it) }
         download.quality?.let { command.add("--format"); command.add("bestvideo[height<=${it}]+bestaudio/best[height<=${it}]") }
@@ -250,4 +255,19 @@ class DownloadService(
     }
 
     fun getConfig(): String = baseDirectory
+
+    companion object {
+        /** yt-dlp output template used when no custom pattern is supplied. */
+        internal const val DEFAULT_OUTPUT_TEMPLATE = "%(title)s [%(id)s].%(ext)s"
+        private const val EXT_PLACEHOLDER = "%(ext)s"
+    }
+
+    /**
+     * yt-dlp requires the output template to contain an `%(ext)s` placeholder; append it when
+     * the user pattern omits it so free-text patterns still produce a file with an extension.
+     */
+    private fun normalizeOutputTemplate(pattern: String): String {
+        val trimmed = pattern.trim()
+        return if (trimmed.contains(EXT_PLACEHOLDER)) trimmed else "$trimmed.$EXT_PLACEHOLDER"
+    }
 }

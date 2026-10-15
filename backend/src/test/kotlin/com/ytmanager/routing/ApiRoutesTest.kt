@@ -166,4 +166,21 @@ class ApiRoutesTest {
             close(CloseReason(CloseReason.Codes.NORMAL, "done"))
         }
     }
+
+    @Test
+    fun `filename pattern flows through the REST layer`() = testApplication {
+        installRoutes(newService())
+
+        val response = client.post("/api/downloads") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"url":"https://example.com/v","filenamePattern":"%(id)s %(title)s"}""")
+        }
+        assertEquals(HttpStatusCode.Created, response.status)
+        val id = Regex("\"id\"\\s*:\\s*\"([^\"]+)\"").find(response.bodyAsText())?.groupValues?.get(1)
+        assertNotNull(id)
+
+        val found = client.get("/api/downloads/$id")
+        assertEquals(HttpStatusCode.OK, found.status)
+        assertTrue(found.bodyAsText().contains("%(id)s %(title)s"))
+    }
 }
