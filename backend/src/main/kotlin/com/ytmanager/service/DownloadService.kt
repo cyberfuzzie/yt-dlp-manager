@@ -5,8 +5,6 @@ import com.ytmanager.model.DownloadRequest
 import com.ytmanager.model.DownloadStatus
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.serialization.json.Json
 import java.io.File
 import java.time.Instant
 import java.util.UUID
@@ -18,16 +16,44 @@ class DownloadService(
     private val ytDlpExecutable: String = "yt-dlp",
 ) {
     private val downloads = ConcurrentHashMap<String, DownloadInfo>()
-    private val mutex = Mutex()
     private val activeProcesses = ConcurrentHashMap<String, Process>()
+    private val providerWorkers = ConcurrentHashMap<String, Channel<String>>()
 
-    fun getAllDownloads(): List<DownloadInfo> {
-        return downloads.values.toList().sortedByDescending { it.createdAt }
+    companion object {
+        private val TERMINAL_STATUSES = setOf(
+            DownloadStatus.COMPLETED,
+            DownloadStatus.FAILED,
+            DownloadStatus.CANCELLED,
+        )
+
+        /**
+         * Extracts a provider key from a URL by lowercasing the host and stripping
+         * a leading `www.` prefix.  Falls back to the trimmed raw URL when parsing
+         * fails or no host is present, so unparseable URLs never block each other.
+         */
+        internal fun providerKey(url: String): String {
+            return try {
+                val uri = java.net.URI(url)
+                val host = uri.host
+                if (host != null) {
+                    host.lowercase().removePrefix("www.")
+                } else {
+                    url.trim()
+                }
+            } catch (e: Exception) {
+                url.trim()
+            }
+        }
+
+        /** yt-dlp output template used when no custom pattern is supplied. */
+        internal const val DEFAULT_OUTPUT_TEMPLATE = "%(title)s [%(id)s].%(ext)s"
+        private const val EXT_PLACEHOLDER = "%(ext)s"
     }
 
-    fun getDownload(id: String): DownloadInfo? {
-        return downloads[id]
-    }
+    fun getAllDownloads(): List<DownloadInfo> =
+        downloads.values.toList().sortedByDescending { it.createdAt }
+
+    fun getDownload(id: String): DownloadInfo? = downloads[id]
 
     suspend fun addDownload(request: DownloadRequest): DownloadInfo {
         val download = DownloadInfo(
@@ -37,89 +63,59 @@ class DownloadService(
             quality = request.quality,
             filenamePattern = request.filenamePattern,
         )
-        
+
         downloads[download.id] = download
         updateChannel.send(download.copy())
-        
-        CoroutineScope(Dispatchers.IO).launch {
-            executeDownload(download)
-        }
-        
-        return download
-    }
 
-    private suspend fun executeDownload(download: DownloadInfo) {
-        val processMutex = Mutex()
-        
-        try {
-            updateStatus(download.id, DownloadStatus.DOWNLOADING, startedAt = Instant.now())
-            
-            val targetDir = resolveTargetDirectory(download.targetDirectory)
-            targetDir.mkdirs()
-            
-            val command = buildYtDlpCommand(download, targetDir)
-            
-            val process = ProcessBuilder(*command.toTypedArray())
-                .directory(targetDir)
-                .redirectErrorStream(true)
-                .start()
-            
-            processMutex.lock()
-            try {
-                activeProcesses[download.id] = process
-            } finally {
-                processMutex.unlock()
+        val key = providerKey(request.url)
+        val channel = providerWorkers.getOrPut(key) {
+            val newChannel = Channel<String>(Channel.UNLIMITED)
+            CoroutineScope(Dispatchers.IO).launch {
+                for (id in newChannel) {
+                    val info = downloads[id] ?: continue
+                    if (!tryStart(id)) continue
+
+                    val process = try {
+                        val targetDir = resolveTargetDirectory(info.targetDirectory)
+                        targetDir.mkdirs()
+                        val command = buildYtDlpCommand(info, targetDir)
+                        ProcessBuilder(*command.toTypedArray())
+                            .directory(targetDir)
+                            .redirectErrorStream(true)
+                            .start()
+                    } catch (e: Exception) {
+                        updateStatus(id, DownloadStatus.FAILED, errorMessage = e.message ?: "Unknown error", completedAt = Instant.now())
+                        continue
+                    }
+                    activeProcesses[id] = process
+
+                    try {
+                        val output = StringBuilder()
+                        val inputStream = process.inputStream.bufferedReader()
+                        while (true) {
+                            val line = inputStream.readLine() ?: break
+                            output.append(line).append("\n")
+                            parseProgress(line, id)
+                        }
+                        val exitCode = process.waitFor()
+                        activeProcesses.remove(id)
+                        if (exitCode == 0) {
+                            val filename = extractFilename(output.toString()) ?: "unknown"
+                            updateStatus(id, DownloadStatus.COMPLETED, filename = filename, completedAt = Instant.now(), progress = 100.0)
+                        } else {
+                            updateStatus(id, DownloadStatus.FAILED, errorMessage = "yt-dlp exited with code $exitCode: ${output.takeLast(500)}", completedAt = Instant.now())
+                        }
+                    } catch (e: Exception) {
+                        activeProcesses.remove(id)
+                        updateStatus(id, DownloadStatus.FAILED, errorMessage = e.message ?: "Unknown error", completedAt = Instant.now())
+                    }
+                }
             }
-            
-            val output = StringBuilder()
-            val inputStream = process.inputStream.bufferedReader()
-            
-            while (true) {
-                val line = inputStream.readLine() ?: break
-                output.append(line).append("\n")
-                parseProgress(line, download.id)
-            }
-            
-            val exitCode = process.waitFor()
-            
-            processMutex.lock()
-            try {
-                activeProcesses.remove(download.id)
-            } finally {
-                processMutex.unlock()
-            }
-            
-            if (exitCode == 0) {
-                val filename = extractFilename(output.toString()) ?: "unknown"
-                updateStatus(
-                    download.id,
-                    DownloadStatus.COMPLETED,
-                    filename = filename,
-                    completedAt = Instant.now(),
-                    progress = 100.0
-                )
-            } else {
-                updateStatus(
-                    download.id,
-                    DownloadStatus.FAILED,
-                    errorMessage = "yt-dlp exited with code $exitCode: ${output.takeLast(500)}",
-                    completedAt = Instant.now()
-                )
-            }
-        } catch (e: Exception) {
-            processMutex.lock()
-            try {
-                activeProcesses.remove(download.id)
-            } finally {
-                processMutex.unlock()
-            }
-            updateStatus(
-                download.id,
-                DownloadStatus.FAILED,
-                errorMessage = e.message ?: "Unknown error",
-                completedAt = Instant.now()
-            )
+            newChannel
         }
+        channel.send(download.id)
+
+        return download
     }
 
     private fun resolveTargetDirectory(relativePath: String?): File {
@@ -133,7 +129,7 @@ class DownloadService(
 
     private fun buildYtDlpCommand(download: DownloadInfo, targetDir: File): List<String> {
         val command = mutableListOf<String>(ytDlpExecutable)
-        
+
         command.add("--no-playlist")
 
         val customPattern = download.filenamePattern?.takeIf { it.isNotBlank() }
@@ -142,16 +138,19 @@ class DownloadService(
         }
         command.add("--output")
         command.add(normalizeOutputTemplate(customPattern ?: DEFAULT_OUTPUT_TEMPLATE))
-        
+
         download.format?.let { command.add("--format"); command.add(it) }
-        download.quality?.let { command.add("--format"); command.add("bestvideo[height<=${it}]+bestaudio/best[height<=${it}]") }
-        
+        download.quality?.let {
+            command.add("--format")
+            command.add("bestvideo[height<=${it}]+bestaudio/best[height<=${it}]")
+        }
+
         command.add("--newline")
         command.add("--progress-template")
         command.add("download:%(progress._percent_str)s|%(progress._speed_str)s|%(progress._eta_str)s")
-        
+
         command.add(download.url)
-        
+
         return command
     }
 
@@ -162,7 +161,7 @@ class DownloadService(
                 val progressStr = parts[0].replace("%", "").trim()
                 val speed = parts[1].trim()
                 val eta = parts[2].trim()
-                
+
                 progressStr.toDoubleOrNull()?.let { progress ->
                     updateProgress(downloadId, progress, speed, eta)
                 }
@@ -176,7 +175,7 @@ class DownloadService(
                     downloadId,
                     progress,
                     speedMatch?.groupValues?.get(1),
-                    etaMatch?.groupValues?.get(1)
+                    etaMatch?.groupValues?.get(1),
                 )
             }
         }
@@ -192,7 +191,7 @@ class DownloadService(
             try {
                 updateChannel.trySend(updated)
             } catch (e: Exception) {
-                // Channel full, ignore
+                // Channel full or closed, ignore
             }
             updated
         }
@@ -208,6 +207,11 @@ class DownloadService(
         errorMessage: String? = null,
     ) {
         downloads.computeIfPresent(id) { _, info ->
+            // Terminal status guard: do not overwrite terminal statuses
+            if (info.status in TERMINAL_STATUSES) {
+                return@computeIfPresent info
+            }
+
             val updated = info.copy(
                 status = status,
                 startedAt = startedAt ?: info.startedAt,
@@ -219,34 +223,62 @@ class DownloadService(
             try {
                 updateChannel.trySend(updated)
             } catch (e: Exception) {
-                // Channel full, ignore
+                // Channel full or closed, ignore
             }
             updated
         }
     }
 
-    private fun extractFilename(output: String): String? {
-        val patterns = listOf(
-            """\[download\] Destination: (.+)""".toRegex(),
-            """Merging formats into "(.+)"""".toRegex(),
-            """\[ffmpeg\] Merging formats into "(.+)"""".toRegex(),
-        )
-        
-        for (pattern in patterns) {
-            val match = pattern.find(output)
-            match?.groupValues?.get(1)?.let { return it }
+    /** Atomically transitions PENDING -> DOWNLOADING; returns false if not PENDING. */
+    private fun tryStart(id: String): Boolean {
+        var started = false
+        downloads.computeIfPresent(id) { _, info ->
+            if (info.status == DownloadStatus.PENDING) {
+                started = true
+                val updated = info.copy(
+                    status = DownloadStatus.DOWNLOADING,
+                    startedAt = Instant.now(),
+                )
+                try {
+                    updateChannel.trySend(updated)
+                } catch (e: Exception) {
+                    // Channel full or closed, ignore
+                }
+                updated
+            } else {
+                info
+            }
         }
-        
-        val lines = output.lines().filter { it.contains("Destination:") || it.contains("Merging") }.toList()
-        for (line in lines.reversed()) {
-            val match = """[">]([^"<]+)\.[a-zA-Z0-9]+["<]?$""".toRegex().find(line)
-            match?.groupValues?.get(1)?.let { return "$it.${line.substringAfterLast(".")}" }
+        return started
+    }
+
+    /** Atomically transitions PENDING -> CANCELLED; returns false if not PENDING. */
+    private fun tryCancelPending(id: String): Boolean {
+        var cancelled = false
+        downloads.computeIfPresent(id) { _, info ->
+            if (info.status == DownloadStatus.PENDING) {
+                cancelled = true
+                val updated = info.copy(
+                    status = DownloadStatus.CANCELLED,
+                    completedAt = Instant.now(),
+                )
+                try {
+                    updateChannel.trySend(updated)
+                } catch (e: Exception) {
+                    // Channel full or closed, ignore
+                }
+                updated
+            } else {
+                info
+            }
         }
-        
-        return null
+        return cancelled
     }
 
     fun cancelDownload(id: String): Boolean {
+        // First try to cancel a queued (PENDING) download.
+        if (tryCancelPending(id)) return true
+        // Otherwise try to cancel a running process.
         return activeProcesses.remove(id)?.let { process ->
             process.destroyForcibly()
             updateStatus(id, DownloadStatus.CANCELLED, completedAt = Instant.now())
@@ -256,15 +288,30 @@ class DownloadService(
 
     fun getConfig(): String = baseDirectory
 
-    companion object {
-        /** yt-dlp output template used when no custom pattern is supplied. */
-        internal const val DEFAULT_OUTPUT_TEMPLATE = "%(title)s [%(id)s].%(ext)s"
-        private const val EXT_PLACEHOLDER = "%(ext)s"
+    private fun extractFilename(output: String): String? {
+        val patterns = listOf(
+            """\[download\] Destination: (.+)""".toRegex(),
+            """Merging formats into "(.+)"""".toRegex(),
+            """\[ffmpeg\] Merging formats into "(.+)""""".toRegex(),
+        )
+
+        for (pattern in patterns) {
+            val match = pattern.find(output)
+            match?.groupValues?.get(1)?.let { return it }
+        }
+
+        val lines = output.lines().filter { it.contains("Destination:") || it.contains("Merging") }.toList()
+        for (line in lines.reversed()) {
+            val match = """[">]([^"<]+)\.[a-zA-Z0-9]+["<]?$""".toRegex().find(line)
+            match?.groupValues?.get(1)?.let { return "$it.${line.substringAfterLast(".")}" }
+        }
+
+        return null
     }
 
     /**
-     * yt-dlp requires the output template to contain an `%(ext)s` placeholder; append it when
-     * the user pattern omits it so free-text patterns still produce a file with an extension.
+     * Ensures the user-supplied output template contains an `%(ext)s` placeholder;
+     * appends it when missing so free-text patterns still produce a file with an extension.
      */
     private fun normalizeOutputTemplate(pattern: String): String {
         val trimmed = pattern.trim()
