@@ -8,10 +8,10 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertTrue
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
@@ -52,7 +52,7 @@ class ProviderThrottleTest {
         val lines = File(tempDir, "log.txt").readLines()
         val end1 = lines[1].split("|")[1].toLong()
         val start2 = lines[2].split("|")[1].toLong()
-        assertTrue(end1 < start2) { "downloads should not overlap" }
+        assertTrue(end1 < start2, "downloads should not overlap")
     }
 
     // ── b. Two downloads on DIFFERENT providers run concurrently ────────────
@@ -285,7 +285,7 @@ class ProviderThrottleTest {
         assertTrue(logFile.exists(), "log file should exist")
         val lines = logFile.readLines()
         // Each download writes start + end = 2 lines; 6 downloads = 12 lines
-        assertEquals(12, lines.size) { "expected 12 log entries for 6 downloads" }
+        assertEquals(12, lines.size, "expected 12 log entries for 6 downloads")
 
         // Parse intervals: [start_ts1, end_ts1], [start_ts2, end_ts2], ...
         // Verify each end_ts <= next start_ts (no overlap)

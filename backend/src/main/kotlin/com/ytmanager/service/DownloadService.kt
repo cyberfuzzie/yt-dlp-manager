@@ -70,14 +70,14 @@ class DownloadService(
         val key = providerKey(request.url)
         val newChannel = Channel<String>(Channel.UNLIMITED)
         val channel = providerWorkers.putIfAbsent(key, newChannel) ?: newChannel.also {
-            startWorker(key, it)
+            startWorker(it)
         }
         channel.send(download.id)
 
         return download
     }
 
-    private fun startWorker(key: String, channel: Channel<String>) {
+    private fun startWorker(channel: Channel<String>) {
         CoroutineScope(Dispatchers.IO).launch {
             for (id in channel) {
                 val info = downloads[id] ?: continue
@@ -112,52 +112,15 @@ class DownloadService(
                     }
                     val exitCode = process.waitFor()
                     activeProcesses.remove(id)
-                    // Atomically transition to terminal status; skip if already CANCELLED.
-                    downloads.computeIfPresent(id) { _, info ->
-                        if (info.status in TERMINAL_STATUSES) info
-                        else {
-                            val updated = if (exitCode == 0) {
-                                val filename = extractFilename(output.toString()) ?: "unknown"
-                                info.copy(
-                                    status = DownloadStatus.COMPLETED,
-                                    filename = filename,
-                                    completedAt = Instant.now(),
-                                    progress = 100.0,
-                                )
-                            } else {
-                                info.copy(
-                                    status = DownloadStatus.FAILED,
-                                    errorMessage = "yt-dlp exited with code $exitCode: ${output.takeLast(500)}",
-                                    completedAt = Instant.now(),
-                                )
-                            }
-                            try {
-                                updateChannel.trySend(updated)
-                            } catch (e: Exception) {
-                                // Channel full or closed, ignore
-                            }
-                            updated
-                        }
+                    if (exitCode == 0) {
+                        val filename = extractFilename(output.toString()) ?: "unknown"
+                        updateStatus(id, DownloadStatus.COMPLETED, filename = filename, completedAt = Instant.now(), progress = 100.0)
+                    } else {
+                        updateStatus(id, DownloadStatus.FAILED, errorMessage = "yt-dlp exited with code $exitCode: ${output.takeLast(500)}", completedAt = Instant.now())
                     }
                 } catch (e: Exception) {
                     activeProcesses.remove(id)
-                    // Same atomic pattern for exceptions.
-                    downloads.computeIfPresent(id) { _, info ->
-                        if (info.status in TERMINAL_STATUSES) info
-                        else {
-                            val updated = info.copy(
-                                status = DownloadStatus.FAILED,
-                                errorMessage = e.message ?: "Unknown error",
-                                completedAt = Instant.now(),
-                            )
-                            try {
-                                updateChannel.trySend(updated)
-                            } catch (e: Exception) {
-                                // Channel full or closed, ignore
-                            }
-                            updated
-                        }
-                    }
+                    updateStatus(id, DownloadStatus.FAILED, errorMessage = e.message ?: "Unknown error", completedAt = Instant.now())
                 }
             }
         }
