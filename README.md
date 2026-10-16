@@ -8,6 +8,7 @@ A video download manager (YouTube, Twitch, etc.) with a **Kotlin/Ktor backend** 
 - 🗂 Configurable filename pattern (free text or presets)
 - 📁 Configurable base download directory
 - 📂 Optional relative target directory per download
+- ⏳ One download per provider at a time (further downloads for the same site queue and start automatically)
 - 📊 Real-time overview of all downloads (WebSocket)
 - ⏯ Start, cancel and track progress of downloads
 - 🎨 Modern, responsive UI with dark/light mode
@@ -74,8 +75,12 @@ APP_DOWNLOAD_BASE_DIRECTORY=/downloads
 1. **Add download**: enter one or more URLs (one per line), optionally specify a target directory relative to the base directory and a filename pattern (default, preset, or custom yt-dlp template)
 2. **Advanced options**: format selector and max. quality
 3. **Overview**: all downloads with status, progress, speed and ETA
-4. **Cancel**: running downloads can be cancelled
+4. **Cancel**: running downloads can be cancelled; queued downloads (status **Pending**) can also be cancelled before they start
 5. **Details**: expand for full metadata including the filename pattern used
+
+### Concurrency
+
+Only one download per provider (URL host) runs at a time — downloads for different providers still run in parallel. Additional downloads for the same provider are queued in FIFO order and start automatically when the previous download finishes. A queued download shows status **Pending** and can be cancelled before it starts.
 
 ## API endpoints
 
