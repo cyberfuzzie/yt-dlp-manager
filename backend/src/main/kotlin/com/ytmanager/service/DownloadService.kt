@@ -68,54 +68,99 @@ class DownloadService(
         updateChannel.send(download.copy())
 
         val key = providerKey(request.url)
-        val channel = providerWorkers.getOrPut(key) {
-            val newChannel = Channel<String>(Channel.UNLIMITED)
-            CoroutineScope(Dispatchers.IO).launch {
-                for (id in newChannel) {
-                    val info = downloads[id] ?: continue
-                    if (!tryStart(id)) continue
-
-                    val process = try {
-                        val targetDir = resolveTargetDirectory(info.targetDirectory)
-                        targetDir.mkdirs()
-                        val command = buildYtDlpCommand(info, targetDir)
-                        ProcessBuilder(*command.toTypedArray())
-                            .directory(targetDir)
-                            .redirectErrorStream(true)
-                            .start()
-                    } catch (e: Exception) {
-                        updateStatus(id, DownloadStatus.FAILED, errorMessage = e.message ?: "Unknown error", completedAt = Instant.now())
-                        continue
-                    }
-                    activeProcesses[id] = process
-
-                    try {
-                        val output = StringBuilder()
-                        val inputStream = process.inputStream.bufferedReader()
-                        while (true) {
-                            val line = inputStream.readLine() ?: break
-                            output.append(line).append("\n")
-                            parseProgress(line, id)
-                        }
-                        val exitCode = process.waitFor()
-                        activeProcesses.remove(id)
-                        if (exitCode == 0) {
-                            val filename = extractFilename(output.toString()) ?: "unknown"
-                            updateStatus(id, DownloadStatus.COMPLETED, filename = filename, completedAt = Instant.now(), progress = 100.0)
-                        } else {
-                            updateStatus(id, DownloadStatus.FAILED, errorMessage = "yt-dlp exited with code $exitCode: ${output.takeLast(500)}", completedAt = Instant.now())
-                        }
-                    } catch (e: Exception) {
-                        activeProcesses.remove(id)
-                        updateStatus(id, DownloadStatus.FAILED, errorMessage = e.message ?: "Unknown error", completedAt = Instant.now())
-                    }
-                }
-            }
-            newChannel
+        val newChannel = Channel<String>(Channel.UNLIMITED)
+        val channel = providerWorkers.putIfAbsent(key, newChannel) ?: newChannel.also {
+            startWorker(key, it)
         }
         channel.send(download.id)
 
         return download
+    }
+
+    private fun startWorker(key: String, channel: Channel<String>) {
+        CoroutineScope(Dispatchers.IO).launch {
+            for (id in channel) {
+                val info = downloads[id] ?: continue
+                if (!tryStart(id)) continue
+
+                val process = try {
+                    val targetDir = resolveTargetDirectory(info.targetDirectory)
+                    targetDir.mkdirs()
+                    val command = buildYtDlpCommand(info, targetDir)
+                    ProcessBuilder(*command.toTypedArray())
+                        .directory(targetDir)
+                        .redirectErrorStream(true)
+                        .start()
+                } catch (e: Exception) {
+                    updateStatus(id, DownloadStatus.FAILED, errorMessage = e.message ?: "Unknown error", completedAt = Instant.now())
+                    continue
+                }
+                activeProcesses[id] = process
+
+                // Guard against cancellation between process registration and drain.
+                if (downloads[id]?.status == DownloadStatus.CANCELLED) {
+                    process.destroyForcibly()
+                }
+
+                try {
+                    val output = StringBuilder()
+                    val inputStream = process.inputStream.bufferedReader()
+                    while (true) {
+                        val line = inputStream.readLine() ?: break
+                        output.append(line).append("\n")
+                        parseProgress(line, id)
+                    }
+                    val exitCode = process.waitFor()
+                    activeProcesses.remove(id)
+                    // Atomically transition to terminal status; skip if already CANCELLED.
+                    downloads.computeIfPresent(id) { _, info ->
+                        if (info.status in TERMINAL_STATUSES) info
+                        else {
+                            val updated = if (exitCode == 0) {
+                                val filename = extractFilename(output.toString()) ?: "unknown"
+                                info.copy(
+                                    status = DownloadStatus.COMPLETED,
+                                    filename = filename,
+                                    completedAt = Instant.now(),
+                                    progress = 100.0,
+                                )
+                            } else {
+                                info.copy(
+                                    status = DownloadStatus.FAILED,
+                                    errorMessage = "yt-dlp exited with code $exitCode: ${output.takeLast(500)}",
+                                    completedAt = Instant.now(),
+                                )
+                            }
+                            try {
+                                updateChannel.trySend(updated)
+                            } catch (e: Exception) {
+                                // Channel full or closed, ignore
+                            }
+                            updated
+                        }
+                    }
+                } catch (e: Exception) {
+                    activeProcesses.remove(id)
+                    // Same atomic pattern for exceptions.
+                    downloads.computeIfPresent(id) { _, info ->
+                        if (info.status in TERMINAL_STATUSES) info
+                        else {
+                            val updated = info.copy(
+                                status = DownloadStatus.FAILED,
+                                errorMessage = e.message ?: "Unknown error",
+                                completedAt = Instant.now(),
+                            )
+                            try {
+                                updateChannel.trySend(updated)
+                            } catch (e: Exception) {
+                                // Channel full or closed, ignore
+                            }
+                            updated
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private fun resolveTargetDirectory(relativePath: String?): File {
@@ -275,15 +320,42 @@ class DownloadService(
         return cancelled
     }
 
+    /** Atomically transitions DOWNLOADING -> CANCELLED; returns false if not DOWNLOADING. */
+    private fun tryCancelRunning(id: String): Boolean {
+        var cancelled = false
+        downloads.computeIfPresent(id) { _, info ->
+            if (info.status == DownloadStatus.DOWNLOADING) {
+                cancelled = true
+                val updated = info.copy(
+                    status = DownloadStatus.CANCELLED,
+                    completedAt = Instant.now(),
+                )
+                try {
+                    updateChannel.trySend(updated)
+                } catch (e: Exception) {
+                    // Channel full or closed, ignore
+                }
+                updated
+            } else {
+                info
+            }
+        }
+        return cancelled
+    }
+
     fun cancelDownload(id: String): Boolean {
         // First try to cancel a queued (PENDING) download.
         if (tryCancelPending(id)) return true
-        // Otherwise try to cancel a running process.
-        return activeProcesses.remove(id)?.let { process ->
+        // Then try to cancel a running process.
+        activeProcesses.remove(id)?.let { process ->
             process.destroyForcibly()
             updateStatus(id, DownloadStatus.CANCELLED, completedAt = Instant.now())
-            true
-        } ?: false
+            return true
+        }
+        // Finally try to cancel a DOWNLOADING download whose process was already
+        // removed (edge race: process exit between our checks).
+        if (tryCancelRunning(id)) return true
+        return false
     }
 
     fun getConfig(): String = baseDirectory
@@ -292,7 +364,7 @@ class DownloadService(
         val patterns = listOf(
             """\[download\] Destination: (.+)""".toRegex(),
             """Merging formats into "(.+)"""".toRegex(),
-            """\[ffmpeg\] Merging formats into "(.+)""""".toRegex(),
+            """\[ffmpeg\] Merging formats into "(.+)"""".toRegex(),
         )
 
         for (pattern in patterns) {
