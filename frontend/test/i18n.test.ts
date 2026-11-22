@@ -1,5 +1,7 @@
 import { describe, expect, it, beforeEach, vi, afterEach } from 'vitest';
 import { getLocale, setLocale, locale, availableLocales, unwrapT } from '#lib/i18n.ts';
+import deMessages from '../src/locales/de.json';
+import enMessages from '../src/locales/en.json';
 
 describe('locale store', () => {
 	beforeEach(() => setLocale('de'));
@@ -61,6 +63,33 @@ describe('translations completeness', () => {
 		expect(unwrapT('status.failed')).toBe('Failed');
 		expect(unwrapT('status.cancelled')).toBe('Cancelled');
 		setLocale('de');
+	});
+
+	it('provides the filter labels in both locales', () => {
+		const keys = [
+			'downloadList.filters',
+			'downloadList.filterHint',
+			'downloadList.hideStatus',
+			'downloadList.showStatus',
+			'downloadList.allHidden',
+			'downloadList.showAll',
+		];
+		for (const loc of availableLocales) {
+			setLocale(loc);
+			const messages = (loc === 'de' ? deMessages : enMessages) as Record<string, string>;
+			for (const key of keys) {
+				const expected = messages[key].replace('{status}', 'Test');
+				expect(unwrapT(key, { status: 'Test' })).toBe(expected);
+				expect(unwrapT(key, { status: 'Test' })).not.toBe(key);
+			}
+			expect(unwrapT('downloadList.hideStatus', { status: 'Test' })).toContain('Test');
+			expect(unwrapT('downloadList.showStatus', { status: 'Test' })).toContain('Test');
+		}
+		setLocale('de');
+	});
+
+	it('keeps German and English dictionaries in sync', () => {
+		expect(Object.keys(deMessages).sort()).toEqual(Object.keys(enMessages).sort());
 	});
 });
 
