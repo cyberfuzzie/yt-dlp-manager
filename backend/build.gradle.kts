@@ -34,7 +34,7 @@ dependencies {
     implementation("io.ktor:ktor-server-call-logging:3.6.1")
     implementation("io.ktor:ktor-server-call-id:3.6.1")
     implementation("io.ktor:ktor-server-cors:3.6.1")
-    implementation("ch.qos.logback:logback-classic:1.6.5")
+    implementation("ch.qos.logback:logback-classic:1.6.8")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.13.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
     implementation("commons-io:commons-io:2.22.0")
