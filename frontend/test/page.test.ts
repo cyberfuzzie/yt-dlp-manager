@@ -148,6 +148,31 @@ describe('page', () => {
 		expect(apiMock.getDownloads).toHaveBeenCalledTimes(2);
 	});
 
+	it('re-enables the form while the REST refresh is still pending', async () => {
+		let resolveRefresh!: (value: DownloadInfo[]) => void;
+		const refresh = new Promise<DownloadInfo[]>(resolve => { resolveRefresh = resolve; });
+		apiMock.getConfig.mockResolvedValue({ baseDirectory: '' });
+		apiMock.getDownloads
+			.mockResolvedValueOnce([])
+			.mockReturnValueOnce(refresh);
+		apiMock.addDownload.mockResolvedValue({ id: 'n1', message: 'ok' });
+
+		render(Page);
+		await waitFor(() => expect(createWebSocketMock).toHaveBeenCalled());
+
+		await fireEvent.input(screen.getByLabelText(urlsLabel), { target: { value: 'https://a.example' } });
+		await fireEvent.submit(document.querySelector('form') as HTMLFormElement);
+		await waitFor(() => expect(apiMock.getDownloads).toHaveBeenCalledTimes(2));
+
+		const submitButton = document.querySelector('button[type="submit"]') as HTMLButtonElement;
+		await waitFor(() => expect(submitButton).toHaveTextContent('Downloads starten'));
+		expect(submitButton).not.toHaveTextContent('Wird hinzugefügt...');
+		expect((screen.getByLabelText(urlsLabel) as HTMLTextAreaElement).value).toBe('');
+
+		resolveRefresh([makeDownload({ id: 'n1', status: 'PENDING', url: 'https://a.example' })]);
+		await waitFor(() => expect(screen.getByText('Downloads (1)')).toBeInTheDocument());
+	});
+
 	it('keeps newer WebSocket state for downloads already in the list', async () => {
 		apiMock.getConfig.mockResolvedValue({ baseDirectory: '' });
 		apiMock.getDownloads
@@ -208,12 +233,16 @@ describe('page', () => {
 		await fireEvent.input(screen.getByLabelText(urlsLabel), { target: { value: 'https://a.example' } });
 		await fireEvent.submit(document.querySelector('form') as HTMLFormElement);
 
-		await waitFor(() => expect(screen.getByText('Downloads (1)')).toBeInTheDocument());
-		resolveInitial([]);
+		await waitFor(() => expect(screen.getByText('Wartend (1)')).toBeInTheDocument());
+
+		// The older initial snapshot contains the same ID but must neither wipe nor
+		// duplicate the item already added from the refresh request.
+		resolveInitial([makeDownload({ id: 'n1', status: 'PENDING', url: 'https://a.example' })]);
 		await waitFor(() => expect(createWebSocketMock).toHaveBeenCalled());
 
 		expect(screen.getByText('Downloads (1)')).toBeInTheDocument();
 		expect(screen.getByText('Wartend (1)')).toBeInTheDocument();
+		expect(document.querySelectorAll('article')).toHaveLength(1);
 	});
 
 	it('does not overwrite a socket update that arrives before the refresh resolves', async () => {

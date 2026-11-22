@@ -60,8 +60,8 @@
     }
 
     async function handleAddDownload(requests: DownloadRequest[]) {
+        isLoading = true;
         try {
-            isLoading = true;
             // Keep successful submissions even when another URL in the batch fails.
             const results = await Promise.allSettled(
                 requests.map(request => api.addDownload(request))
@@ -71,6 +71,10 @@
             const submittedIds = new Set(
                 results.flatMap(result => result.status === 'fulfilled' ? [result.value.id] : [])
             );
+            const failures = results.flatMap(result => result.status === 'rejected' ? [result.reason] : []);
+            if (failures.length > 0) {
+                alertAddError(failures);
+            }
             // The WebSocket snapshot may have been missed while it was connecting,
             // so sync the submitted downloads from REST to show them right away.
             if (submittedIds.size > 0) {
@@ -80,12 +84,6 @@
                     console.error('Failed to load downloads after adding:', e);
                 }
             }
-            const failures = results.flatMap(result => result.status === 'rejected' ? [result.reason] : []);
-            if (failures.length > 0) {
-                alertAddError(failures);
-            }
-        } catch (e) {
-            alertAddError([e]);
         } finally {
             isLoading = false;
         }
