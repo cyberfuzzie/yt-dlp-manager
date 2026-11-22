@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Page from '../src/routes/+page.svelte';
 import { api, createWebSocket } from '#lib/api.ts';
+import type { ConnectionStatus, WebSocketConnection } from '#lib/api.ts';
 import type { DownloadInfo } from '#lib/types.ts';
 import { makeDownload } from './helpers';
 import { setLocale } from '#lib/i18n.ts';
@@ -21,27 +22,24 @@ vi.mock('#lib/api.ts', () => ({
 const apiMock = vi.mocked(api);
 const createWebSocketMock = vi.mocked(createWebSocket);
 
-class FakeWebSocket {
-	onopen: (() => void) | null = null;
-	onclose: (() => void) | null = null;
-	onerror: (() => void) | null = null;
-	closed = false;
-	close = vi.fn(() => {
-		this.closed = true;
-	});
+class FakeConnection {
+	close = vi.fn();
 }
 
-let currentWs: FakeWebSocket;
+let currentConnection: FakeConnection;
 let onDownloadMessage: ((download: DownloadInfo) => void) | null = null;
+let onStatusChange: ((status: ConnectionStatus) => void) | null = null;
 
 beforeEach(() => {
 	setLocale('de');
-	currentWs = new FakeWebSocket();
+	currentConnection = new FakeConnection();
 	onDownloadMessage = null;
+	onStatusChange = null;
 	createWebSocketMock.mockReset();
-	createWebSocketMock.mockImplementation((callback) => {
+	createWebSocketMock.mockImplementation((callback, statusCallback) => {
 		onDownloadMessage = callback;
-		return currentWs as unknown as WebSocket;
+		onStatusChange = statusCallback ?? null;
+		return currentConnection as unknown as WebSocketConnection;
 	});
 	apiMock.getConfig.mockReset();
 	apiMock.getDownloads.mockReset();
@@ -62,7 +60,7 @@ describe('page', () => {
 		expect(screen.getByText('/downloads')).toBeInTheDocument();
 		await waitFor(() => expect(screen.getByText('Downloads (1)')).toBeInTheDocument());
 		expect(createWebSocketMock).toHaveBeenCalledTimes(1);
-		expect(createWebSocketMock).toHaveBeenCalledWith(expect.any(Function));
+		expect(createWebSocketMock).toHaveBeenCalledWith(expect.any(Function), expect.any(Function));
 		expect(screen.getByText('Verbinde...')).toBeInTheDocument();
 	});
 
@@ -73,10 +71,10 @@ describe('page', () => {
 		render(Page);
 		await waitFor(() => expect(createWebSocketMock).toHaveBeenCalled());
 
-		currentWs.onopen?.();
+		onStatusChange?.('connected');
 		await waitFor(() => expect(screen.getByText('Verbunden')).toBeInTheDocument());
 
-		currentWs.onclose?.();
+		onStatusChange?.('disconnected');
 		await waitFor(() => expect(screen.getByText('Getrennt')).toBeInTheDocument());
 	});
 
@@ -87,7 +85,7 @@ describe('page', () => {
 		render(Page);
 		await waitFor(() => expect(createWebSocketMock).toHaveBeenCalled());
 
-		currentWs.onerror?.();
+		onStatusChange?.('disconnected');
 		await waitFor(() => expect(screen.getByText('Getrennt')).toBeInTheDocument());
 	});
 
@@ -225,7 +223,18 @@ describe('page', () => {
 		const { unmount } = render(Page);
 		await waitFor(() => expect(createWebSocketMock).toHaveBeenCalled());
 		unmount();
-		expect(currentWs.close).toHaveBeenCalled();
+		expect(currentConnection.close).toHaveBeenCalled();
+	});
+
+	it('does not open a socket if unmounted before loading finishes', async () => {
+		apiMock.getConfig.mockResolvedValue({ baseDirectory: '' });
+		apiMock.getDownloads.mockResolvedValue([]);
+
+		const { unmount } = render(Page);
+		unmount();
+		await waitFor(() => expect(apiMock.getDownloads).toHaveBeenCalled());
+
+		expect(createWebSocketMock).not.toHaveBeenCalled();
 	});
 
 	it('logs errors when the initial loading fails', async () => {
@@ -245,7 +254,7 @@ describe('page', () => {
 
 		render(Page);
 		await waitFor(() => expect(createWebSocketMock).toHaveBeenCalled());
-		currentWs.onopen?.();
+		onStatusChange?.('connected');
 		await waitFor(() => expect(screen.getByText('Verbunden')).toBeInTheDocument());
 
 		setLocale('en');

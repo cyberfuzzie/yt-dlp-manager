@@ -20,9 +20,12 @@ import io.ktor.server.websocket.webSocket
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.onSubscription
+import kotlinx.coroutines.flow.produceIn
 import kotlinx.coroutines.launch
 
-fun Route.apiRoutes(downloadService: DownloadService) {
+fun Route.apiRoutes(downloadService: DownloadService, updates: SharedFlow<DownloadInfo>) {
     route("/api") {
         get("/config") {
             call.respond(mapOf("baseDirectory" to downloadService.getConfig()))
@@ -67,21 +70,28 @@ fun Route.apiRoutes(downloadService: DownloadService) {
             val json = appJson()
             
             val sendChannel = Channel<DownloadInfo>(Channel.UNLIMITED)
-            
-            // Send initial downloads
-            val initialDownloads = downloadService.getAllDownloads()
-            for (info in initialDownloads) {
-                sendChannel.send(info)
-            }
-            
+
             coroutineScope {
-                // Forward updates from service to WebSocket
+                // Subscribe before taking the snapshot so updates emitted while the
+                // snapshot is built are buffered for this client instead of dropped.
+                val subscribed = CompletableDeferred<Unit>()
+                val updateSubscription = updates
+                    .onSubscription { subscribed.complete(Unit) }
+                    .produceIn(this)
+                subscribed.await()
+
+                val initialDownloads = downloadService.getAllDownloads()
+                for (info in initialDownloads) {
+                    sendChannel.send(info)
+                }
+
+                // Forward every update to this session; the shared flow fans out to all clients.
                 val updateJob = launch {
-                    for (info in downloadService.updateChannel) {
+                    for (info in updateSubscription) {
                         sendChannel.trySend(info)
                     }
                 }
-                
+
                 // Send messages to client
                 val sendJob = launch {
                     for (info in sendChannel) {
@@ -89,7 +99,7 @@ fun Route.apiRoutes(downloadService: DownloadService) {
                         send(Frame.Text(json.encodeToString(WebSocketMessage.serializer(), message)))
                     }
                 }
-                
+
                 // Handle incoming frames
                 val receiveJob = launch {
                     incoming.consumeEach { frame ->
@@ -104,12 +114,13 @@ fun Route.apiRoutes(downloadService: DownloadService) {
                         }
                     }
                 }
-                
+
                 // Wait for receive job to complete (connection closed)
                 receiveJob.join()
-                
+
                 // Cancel other jobs
                 updateJob.cancel()
+                updateSubscription.cancel()
                 sendJob.cancel()
                 sendChannel.close()
             }
