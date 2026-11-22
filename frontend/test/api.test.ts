@@ -41,9 +41,22 @@ describe('api', () => {
 	});
 
 	it('getDownload fetches a single download by id', async () => {
-		fetchMock.mockResolvedValue(jsonResponse({ id: 'd1' }));
-		await expect(api.getDownload('d1')).resolves.toEqual({ id: 'd1' });
+		const download = makeDownload();
+		fetchMock.mockResolvedValue(jsonResponse(download));
+		await expect(api.getDownload('d1')).resolves.toEqual(download);
 		expect(fetchMock.mock.calls[0][0]).toBe('/api/downloads/d1');
+	});
+
+	it('defaults a missing status to PENDING when listing downloads', async () => {
+		const download = { ...makeDownload(), status: undefined };
+		fetchMock.mockResolvedValue(jsonResponse([download]));
+		await expect(api.getDownloads()).resolves.toEqual([{ ...download, status: 'PENDING' }]);
+	});
+
+	it('defaults an unknown status to PENDING when fetching one download', async () => {
+		const download = { ...makeDownload(), status: 'QUEUED' };
+		fetchMock.mockResolvedValue(jsonResponse(download));
+		await expect(api.getDownload('d1')).resolves.toEqual({ ...download, status: 'PENDING' });
 	});
 
 	it('addDownload POSTs the request as JSON', async () => {
@@ -129,6 +142,15 @@ describe('createWebSocket', () => {
 		const download = makeDownload();
 		ws.dispatch('message', { data: JSON.stringify({ type: 'download_update', payload: download }) });
 		expect(onMessage).toHaveBeenCalledWith(download);
+	});
+
+	it('defaults a missing status to PENDING for socket updates', () => {
+		createWebSocket(onMessage);
+		const payload = { ...makeDownload(), status: undefined };
+		FakeWebSocket.instances[0].dispatch('message', {
+			data: JSON.stringify({ type: 'download_update', payload }),
+		});
+		expect(onMessage).toHaveBeenCalledWith({ ...payload, status: 'PENDING' });
 	});
 
 	it('ignores message types that are not download updates', () => {

@@ -1,6 +1,7 @@
 package com.ytmanager.model
 
 import com.ytmanager.appJson
+import kotlinx.serialization.json.JsonObject
 import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -47,6 +48,27 @@ class DownloadModelsTest {
         assertNotNull(info.createdAt)
         assertNull(info.startedAt)
         assertNull(info.completedAt)
+    }
+
+    @Test
+    fun `pending download serialization includes default-valued fields`() {
+        val info = DownloadInfo(
+            id = "pending-1",
+            url = "https://example.com/v",
+            targetDirectory = null,
+            format = null,
+            quality = null,
+        )
+        val element = json.parseToJsonElement(
+            json.encodeToString(DownloadInfo.serializer(), info)
+        ) as JsonObject
+
+        // The frontend groups by status, so default-valued fields must be on the wire.
+        assertEquals("PENDING", element["status"]?.toString()?.trim('"'))
+        assertEquals("0.0", element["progress"]?.toString())
+        assertTrue(element.containsKey("startedAt"))
+        assertTrue(element.containsKey("completedAt"))
+        assertTrue(element.containsKey("filenamePattern"))
     }
 
     @Test

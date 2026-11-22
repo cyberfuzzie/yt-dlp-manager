@@ -34,6 +34,8 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import kotlin.test.Test
@@ -89,6 +91,23 @@ class ApiRoutesTest {
         val response = client.get("/api/downloads")
         assertEquals(HttpStatusCode.OK, response.status)
         assertEquals("[]", response.bodyAsText().trim())
+    }
+
+    @Test
+    fun `downloads endpoint exposes pending status on the wire`() = testApplication {
+        val script = fakeYtDlp(tempDir, "sleep 30\nexit 0")
+        installRoutes(newService(script))
+
+        createDownload("https://example.com/first")
+        val pendingId = createDownload("https://example.com/second")
+
+        val body = client.get("/api/downloads").bodyAsText()
+        val downloads = appJson().parseToJsonElement(body) as JsonArray
+        val pending = downloads.first {
+            (it as JsonObject)["id"]?.toString()?.trim('"') == pendingId
+        } as JsonObject
+
+        assertEquals("PENDING", pending["status"]?.toString()?.trim('"'))
     }
 
     @Test

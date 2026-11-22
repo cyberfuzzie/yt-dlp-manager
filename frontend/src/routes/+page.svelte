@@ -30,26 +30,60 @@
         }
     }
     
+    // Merge REST results without discarding newer state received over the WebSocket.
+    // When submittedIds is given, only those downloads are added.
+    function mergeDownloads(current: DownloadInfo[], submittedIds?: Set<string>) {
+        const knownIds = new Set(downloads.map(d => d.id));
+        const additions = current.filter(d =>
+            !knownIds.has(d.id) && (!submittedIds || submittedIds.has(d.id))
+        );
+        if (additions.length > 0) {
+            downloads = [...additions, ...downloads];
+        }
+    }
+
+    function alertAddError(reasons: unknown[]) {
+        const addLabel = $getT('error.add');
+        const unknown = $getT('error.unknown');
+        const message = reasons
+            .map(reason => reason instanceof Error ? reason.message : unknown)
+            .join('; ');
+        alert(`${addLabel}: ${message}`);
+    }
+
     async function loadDownloads() {
         try {
-            downloads = await api.getDownloads();
+            mergeDownloads(await api.getDownloads());
         } catch (e) {
             console.error('Failed to load downloads:', e);
         }
     }
-    
+
     async function handleAddDownload(requests: DownloadRequest[]) {
+        isLoading = true;
         try {
-            isLoading = true;
-            // Start all downloads in parallel
-            await Promise.all(
+            // Keep successful submissions even when another URL in the batch fails.
+            const results = await Promise.allSettled(
                 requests.map(request => api.addDownload(request))
             );
-            // The WebSocket will update the list
-        } catch (e) {
-            const addLabel = $getT('error.add');
-            const unknown = $getT('error.unknown');
-            alert(`${addLabel}: ${e instanceof Error ? e.message : unknown}`);
+            // The refresh runs in the background so the form is usable again right away.
+            isLoading = false;
+            const submittedIds = new Set(
+                results.flatMap(result => result.status === 'fulfilled' ? [result.value.id] : [])
+            );
+            const failures = results.flatMap(result => result.status === 'rejected' ? [result.reason] : []);
+            if (failures.length > 0) {
+                alertAddError(failures);
+            }
+            // The WebSocket snapshot may have been missed while it was connecting,
+            // so sync the submitted downloads from REST to show them right away.
+            if (submittedIds.size > 0) {
+                try {
+                    mergeDownloads(await api.getDownloads(), submittedIds);
+                } catch (e) {
+                    console.error('Failed to load downloads after adding:', e);
+                }
+            }
         } finally {
             isLoading = false;
         }
