@@ -47,6 +47,7 @@ class DownloadService(
 
         /** yt-dlp output template used when no custom pattern is supplied. */
         internal const val DEFAULT_OUTPUT_TEMPLATE = "%(title)s [%(id)s].%(ext)s"
+        internal const val PROGRESS_PREFIX = "ytm-progress:"
         private const val EXT_PLACEHOLDER = "%(ext)s"
     }
 
@@ -154,8 +155,9 @@ class DownloadService(
         }
 
         command.add("--newline")
+        command.add("--progress")
         command.add("--progress-template")
-        command.add("download:%(progress._percent_str)s|%(progress._speed_str)s|%(progress._eta_str)s")
+        command.add("download:ytm-progress:%(progress._percent_str)s|%(progress._speed_str)s|%(progress._eta_str)s")
 
         command.add(download.url)
 
@@ -163,16 +165,13 @@ class DownloadService(
     }
 
     private fun parseProgress(line: String, downloadId: String) {
-        if (line.startsWith("download:")) {
-            val parts = line.substringAfter("download:").split("|")
+        if (line.startsWith(PROGRESS_PREFIX)) {
+            val parts = line.substringAfter(PROGRESS_PREFIX).split("|")
             if (parts.size >= 3) {
-                val progressStr = parts[0].replace("%", "").trim()
-                val speed = parts[1].trim()
-                val eta = parts[2].trim()
-
-                progressStr.toDoubleOrNull()?.let { progress ->
-                    updateProgress(downloadId, progress, speed, eta)
-                }
+                val progress = parts[0].replace("%", "").trim().toDoubleOrNull() ?: return
+                val speed = parts[1].trim().takeUnless { it.isBlank() || it == "N/A" }
+                val eta = parts[2].trim().takeUnless { it.isBlank() || it == "N/A" }
+                updateProgress(downloadId, progress, speed, eta)
             }
         } else if (line.contains("[download]") && line.contains("%")) {
             val percentMatch = """(\d+\.?\d*)%""".toRegex().find(line)

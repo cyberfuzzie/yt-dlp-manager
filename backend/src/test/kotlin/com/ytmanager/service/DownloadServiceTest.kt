@@ -2,6 +2,7 @@ package com.ytmanager.service
 
 import com.ytmanager.awaitStatus
 import com.ytmanager.fakeYtDlp
+import com.ytmanager.model.DownloadInfo
 import com.ytmanager.model.DownloadRequest
 import com.ytmanager.model.DownloadStatus
 import kotlinx.coroutines.channels.Channel
@@ -72,15 +73,89 @@ class DownloadServiceTest {
     }
 
     @Test
+    fun `buildYtDlpCommand emits the structured progress template`() = runBlocking {
+        val script = fakeYtDlp(
+            tempDir,
+            "printf '%s\\n' \"$@\" > args.txt\necho '[download] Destination: out.mp4'\nexit 0"
+        )
+        val service = service(script)
+        val download = service.addDownload(DownloadRequest(url = "https://example.com/v"))
+
+        awaitStatus(service, download.id) { it == DownloadStatus.COMPLETED }
+
+        val args = readArgs()
+        assertTrue(args.contains("--newline"))
+        assertTrue(args.contains("--progress"))
+        val idx = args.indexOf("--progress-template")
+        assertEquals("download:ytm-progress:%(progress._percent_str)s|%(progress._speed_str)s|%(progress._eta_str)s", args[idx + 1])
+    }
+
+    @Test
+    fun `intermediate progress updates are emitted during download`() = runBlocking<Unit> {
+        val script = fakeYtDlp(
+            tempDir,
+            """
+            echo 'ytm-progress: 10.0%|1.0MiB/s|00:30'
+            sleep 0.2
+            echo 'ytm-progress: 55.5%|2.0MiB/s|00:10'
+            sleep 0.2
+            echo '[download] Destination: ${tempDir.absolutePath}/video.mp4'
+            exit 0
+            """.trimIndent(),
+        )
+        val service = service(script)
+        val download = service.addDownload(DownloadRequest(url = "https://example.com/v"))
+
+        val seen = mutableListOf<DownloadInfo>()
+        val deadline = System.currentTimeMillis() + 15_000
+        while (System.currentTimeMillis() < deadline) {
+            val info = service.getDownload(download.id)
+            if (info != null) seen += info
+            if (info?.status == DownloadStatus.COMPLETED) break
+            delay(25)
+        }
+
+        assertTrue(seen.any { it.status == DownloadStatus.DOWNLOADING && it.progress == 10.0 && it.speed == "1.0MiB/s" && it.eta == "00:30" })
+        assertTrue(seen.any { it.status == DownloadStatus.DOWNLOADING && it.progress == 55.5 && it.speed == "2.0MiB/s" && it.eta == "00:10" })
+        assertEquals(DownloadStatus.COMPLETED, seen.last().status)
+    }
+
+    @Test
+    fun `N A progress fields do not overwrite speed and eta with placeholders`() = runBlocking<Unit> {
+        val script = fakeYtDlp(
+            tempDir,
+            """
+            echo 'ytm-progress:  25.0%|     N/A|N/A'
+            sleep 0.2
+            echo '[download] Destination: ${tempDir.absolutePath}/video.mp4'
+            exit 0
+            """.trimIndent(),
+        )
+        val service = service(script)
+        val download = service.addDownload(DownloadRequest(url = "https://example.com/v"))
+
+        val seen = mutableListOf<DownloadInfo>()
+        val deadline = System.currentTimeMillis() + 15_000
+        while (System.currentTimeMillis() < deadline) {
+            service.getDownload(download.id)?.let { seen += it }
+            if (seen.lastOrNull()?.status == DownloadStatus.COMPLETED) break
+            delay(25)
+        }
+
+        assertTrue(seen.any { it.progress == 25.0 && it.speed == null && it.eta == null })
+        assertEquals(DownloadStatus.COMPLETED, seen.last().status)
+    }
+
+    @Test
     fun `a successful run is parsed and completed`() = runBlocking<Unit> {
         val script = fakeYtDlp(
             tempDir,
             """
-            echo 'download: 10.0%|1.0MiB/s|00:30'
+            echo 'ytm-progress: 10.0%|1.0MiB/s|00:30'
             echo '[download]  50.0% of 10MiB at 1.5K/s ETA 00:05'
             echo 'unrelated noise'
-            echo 'download: abc%|1.0MiB/s|00:30'
-            echo 'download: too-short'
+            echo 'ytm-progress: abc%|1.0MiB/s|00:30'
+            echo 'ytm-progress: too-short'
             echo '[download] Destination: ${tempDir.absolutePath}/video.mp4'
             exit 0
             """.trimIndent(),

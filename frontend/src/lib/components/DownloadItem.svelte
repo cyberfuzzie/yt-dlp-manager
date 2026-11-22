@@ -90,10 +90,12 @@
     
     {#if download.status === 'DOWNLOADING'}
         <div class="progress-container">
-            <div 
-                class="progress-bar" 
-                style="width: {(download.progress ?? 0)}%; background: {getProgressColor()};"
-            ></div>
+            <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow={download.progress ?? 0}>
+                <div
+                    class="progress-fill"
+                    style="width: {(download.progress ?? 0)}%; background: {getProgressColor()};"
+                ></div>
+            </div>
             <span class="progress-text">{(download.progress ?? 0).toFixed(1)}%</span>
         </div>
         <div class="progress-meta">
@@ -296,8 +298,8 @@
         overflow: hidden;
         flex: 1;
     }
-    
-    .progress-bar > div {
+
+    .progress-fill {
         height: 100%;
         border-radius: 3px;
         transition: width 0.3s ease-out;
