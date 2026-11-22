@@ -1,4 +1,4 @@
-import type { DownloadInfo, DownloadRequest, DownloadResponse, ConfigResponse, WebSocketMessage } from './types';
+import { STATUS_KEYS, type DownloadInfo, type DownloadRequest, type DownloadResponse, type ConfigResponse, type WebSocketMessage } from './types';
 
 const API_BASE = '/api';
 const RECONNECT_BASE_DELAY_MS = 1_000;
@@ -27,15 +27,27 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
     return response.json();
 }
 
+/**
+ * Older backends omit default-valued fields, so a fresh download can arrive
+ * without a status. Default it here so the UI can always group the item.
+ */
+function normalizeDownload(download: DownloadInfo): DownloadInfo {
+    return STATUS_KEYS.includes(download.status)
+        ? download
+        : { ...download, status: 'PENDING' };
+}
+
 export const api = {
     getConfig: (): Promise<ConfigResponse> => 
         fetchJson(`${API_BASE}/config`),
     
     getDownloads: (): Promise<DownloadInfo[]> => 
-        fetchJson(`${API_BASE}/downloads`),
+        fetchJson<DownloadInfo[]>(`${API_BASE}/downloads`)
+            .then(downloads => downloads.map(normalizeDownload)),
     
     getDownload: (id: string): Promise<DownloadInfo> => 
-        fetchJson(`${API_BASE}/downloads/${id}`),
+        fetchJson<DownloadInfo>(`${API_BASE}/downloads/${id}`)
+            .then(normalizeDownload),
     
     addDownload: (request: DownloadRequest): Promise<DownloadResponse> => 
         fetchJson(`${API_BASE}/downloads`, {
@@ -111,7 +123,7 @@ export function createWebSocket(
             try {
                 const message: WebSocketMessage = JSON.parse(event.data);
                 if (message.type === 'download_update') {
-                    onMessage(message.payload);
+                    onMessage(normalizeDownload(message.payload));
                 }
             } catch {
                 // Silently ignore malformed messages — the WebSocket connection stays alive.
