@@ -38,14 +38,30 @@
         }
     }
     
+    // Keep state received over the WebSocket: it may be newer than the REST list.
+    function showSubmittedDownloads(current: DownloadInfo[], submittedIds: Set<string>) {
+        const knownIds = new Set(downloads.map(d => d.id));
+        const additions = current.filter(d => submittedIds.has(d.id) && !knownIds.has(d.id));
+        if (additions.length > 0) {
+            downloads = [...additions, ...downloads];
+        }
+    }
+
     async function handleAddDownload(requests: DownloadRequest[]) {
         try {
             isLoading = true;
             // Start all downloads in parallel
-            await Promise.all(
+            const responses = await Promise.all(
                 requests.map(request => api.addDownload(request))
             );
-            // The WebSocket will update the list
+            // The WebSocket snapshot may have been missed while it was connecting,
+            // so sync the submitted downloads from REST to show them right away.
+            try {
+                const current = await api.getDownloads();
+                showSubmittedDownloads(current, new Set(responses.map(r => r.id)));
+            } catch (e) {
+                console.error('Failed to load downloads after adding:', e);
+            }
         } catch (e) {
             const addLabel = $getT('error.add');
             const unknown = $getT('error.unknown');
