@@ -78,6 +78,7 @@ docker compose up -d --build
 
 - **Backend**: `Application.kt` wires Ktor plugins (CORS, ContentNegotiation, WebSockets, CallId, CallLogging). `DownloadService` launches `yt-dlp` as a subprocess, parses its `--progress-template` output, and pushes `DownloadInfo` updates onto a `Channel`. `ApiRoutes` exposes REST endpoints and a `/api/ws` WebSocket that streams `{ "type": "download_update", "payload": DownloadInfo }` messages.
 - **Frontend**: `src/lib/api.ts` is the API client (REST + WebSocket with auto-reconnect). `src/lib/types.ts` defines the shared TypeScript types. Components live in `src/lib/components/`.
+- **WebSocket resilience**: Ktor pings idle clients every 20s and nginx allows long-lived proxied connections; the frontend reconnects with exponential backoff. `createWebSocket()` returns a `WebSocketConnection` handle — call `close()` on teardown to stop reconnecting, and use the optional status callback for UI state instead of assigning `onopen`/`onclose` on the socket. Backend updates are fanned out from `DownloadService`'s channel through a `SharedFlow` so every connected client (including a freshly reconnected one) receives each update.
 - **Type vs. value gotcha**: `DownloadStatus` is a TypeScript *type* (a string union), not a runtime enum. Never use it as a value (e.g. `Object.values(DownloadStatus)`); iterate over `Object.keys(STATUS_LABELS)` instead.
 
 ## CI/CD conventions

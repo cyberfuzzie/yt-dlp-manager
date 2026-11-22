@@ -5,13 +5,15 @@
     import DownloadList from '#lib/components/DownloadList.svelte';
     import LanguageSwitcher from '#lib/components/LanguageSwitcher.svelte';
     import { api, createWebSocket } from '#lib/api.ts';
+    import type { WebSocketConnection, ConnectionStatus } from '#lib/api.ts';
     import type { DownloadInfo, DownloadRequest, ConfigResponse } from '#lib/types.ts';
     
     let downloads: DownloadInfo[] = [];
     let baseDirectory = '';
     let isLoading = false;
-    let ws: WebSocket | null = null;
-    let connectionStatus: 'connecting' | 'connected' | 'disconnected' = 'connecting';
+    let connection: WebSocketConnection | null = null;
+    let connectionStatus: ConnectionStatus = 'connecting';
+    let destroyed = false;
     
     // Reactive translations — $getT creates a dependency on the locale store,
     // so these re-compute when the locale changes.
@@ -62,7 +64,7 @@
     }
     
     function connectWebSocket() {
-        ws = createWebSocket((download) => {
+        connection = createWebSocket((download) => {
             const index = downloads.findIndex(d => d.id === download.id);
             if (index >= 0) {
                 downloads[index] = download;
@@ -70,28 +72,19 @@
                 downloads = [download, ...downloads];
             }
             downloads = [...downloads]; // Trigger reactivity
+        }, (status) => {
+            connectionStatus = status;
         });
-        
-        ws.onopen = () => {
-            connectionStatus = 'connected';
-        };
-        
-        ws.onclose = () => {
-            connectionStatus = 'disconnected';
-        };
-        
-        ws.onerror = () => {
-            connectionStatus = 'disconnected';
-        };
     }
     
     onMount(async () => {
         await Promise.all([loadConfig(), loadDownloads()]);
-        connectWebSocket();
+        if (!destroyed) connectWebSocket();
     });
     
     onDestroy(() => {
-        ws?.close();
+        destroyed = true;
+        connection?.close();
     });
 </script>
 

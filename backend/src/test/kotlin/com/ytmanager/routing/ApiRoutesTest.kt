@@ -2,6 +2,7 @@ package com.ytmanager.routing
 
 import com.ytmanager.appJson
 import com.ytmanager.fakeYtDlp
+import com.ytmanager.model.DownloadInfo
 import com.ytmanager.model.DownloadRequest
 import com.ytmanager.model.DownloadStatus
 import com.ytmanager.service.DownloadService
@@ -23,9 +24,15 @@ import io.ktor.server.websocket.WebSockets as ServerWebSockets
 import io.ktor.websocket.CloseReason
 import io.ktor.websocket.Frame
 import io.ktor.websocket.close
+import io.ktor.websocket.readText
 import io.ktor.websocket.send
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
@@ -41,10 +48,18 @@ class ApiRoutesTest {
     private fun newService(executable: String = "missing-binary-xyz"): DownloadService =
         DownloadService(tempDir.absolutePath, Channel(Channel.UNLIMITED), executable)
 
-    private fun ApplicationTestBuilder.installRoutes(service: DownloadService) {
+    private fun ApplicationTestBuilder.installRoutes(service: DownloadService): MutableSharedFlow<DownloadInfo> {
         install(ServerWebSockets)
         install(ContentNegotiation) { json(appJson()) }
-        routing { apiRoutes(service) }
+        val updates = MutableSharedFlow<DownloadInfo>(extraBufferCapacity = 256)
+        routing { apiRoutes(service, updates) }
+        // Accessing `application` builds the test application, so do it after configuration.
+        application.launch {
+            for (info in service.updateChannel) {
+                updates.emit(info)
+            }
+        }
+        return updates
     }
 
     private suspend fun ApplicationTestBuilder.createDownload(url: String = "https://example.com/v"): String {
@@ -165,6 +180,55 @@ class ApiRoutesTest {
 
             close(CloseReason(CloseReason.Codes.NORMAL, "done"))
         }
+    }
+
+    @Test
+    fun `websocket updates are broadcast to every connected client`() = testApplication {
+        val service = newService()
+        val updates = installRoutes(service)
+
+        val firstReady = CompletableDeferred<Unit>()
+        val secondReady = CompletableDeferred<Unit>()
+        val firstUpdate = CompletableDeferred<String>()
+        val secondUpdate = CompletableDeferred<String>()
+
+        coroutineScope {
+            launch {
+                createClient { install(ClientWebSockets) }.use { client ->
+                    client.webSocket("/api/ws") {
+                        firstReady.complete(Unit)
+                        secondReady.await()
+                        // Both server-side collectors must be subscribed before emitting.
+                        withTimeout(5_000) { updates.subscriptionCount.first { it >= 2 } }
+                        service.updateChannel.send(
+                            DownloadInfo(
+                                url = "https://broadcast.test",
+                                targetDirectory = null,
+                                format = null,
+                                quality = null,
+                            )
+                        )
+                        val frame = withTimeout(5_000) { incoming.receive() }
+                        firstUpdate.complete((frame as Frame.Text).readText())
+                        close(CloseReason(CloseReason.Codes.NORMAL, "done"))
+                    }
+                }
+            }
+            launch {
+                createClient { install(ClientWebSockets) }.use { client ->
+                    client.webSocket("/api/ws") {
+                        secondReady.complete(Unit)
+                        firstReady.await()
+                        val frame = withTimeout(5_000) { incoming.receive() }
+                        secondUpdate.complete((frame as Frame.Text).readText())
+                        close(CloseReason(CloseReason.Codes.NORMAL, "done"))
+                    }
+                }
+            }
+        }
+
+        assertTrue(withTimeout(5_000) { firstUpdate.await() }.contains("broadcast.test"))
+        assertTrue(withTimeout(5_000) { secondUpdate.await() }.contains("broadcast.test"))
     }
 
     @Test
