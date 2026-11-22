@@ -46,7 +46,7 @@ describe('DownloadForm', () => {
 		expect(onSubmit).not.toHaveBeenCalled();
 	});
 
-	it('submits the parsed URLs with optional settings and resets the form', async () => {
+	it('submits the parsed URLs with optional settings and clears only the URLs', async () => {
 		const onSubmit = vi.fn();
 		const { container } = render(DownloadForm, { props: { onSubmit } });
 		await fireEvent.input(screen.getByLabelText(urlsLabel), { target: { value: ' https://a.example\n' } });
@@ -66,6 +66,10 @@ describe('DownloadForm', () => {
 			},
 		]);
 		expect(screen.queryByText('1 URL erkannt')).not.toBeInTheDocument();
+		expect(screen.getByLabelText(urlsLabel)).toHaveValue('');
+		expect(screen.getByLabelText('Zielverzeichnis (relativ, für alle)')).toHaveValue('videos');
+		expect(screen.getByLabelText('Format')).toHaveValue('bestvideo+bestaudio');
+		expect(screen.getByLabelText('Max. Qualität')).toHaveValue('1080');
 	});
 
 	it('hides advanced options again', async () => {
@@ -156,6 +160,8 @@ describe('DownloadForm', () => {
 				filenamePattern: '%(title)s',
 			},
 		]);
+		expect(screen.getByLabelText('Dateinamen-Muster (für alle)')).toHaveValue('custom');
+		expect(screen.getByLabelText('Eigenes yt-dlp-Muster')).toHaveValue('%(title)s');
 	});
 
 	it('empty custom pattern submits undefined', async () => {

@@ -66,13 +66,8 @@
         }));
         
         onSubmit(requests);
-        
+
         urls = '';
-        targetDirectory = '';
-        format = '';
-        quality = '';
-        filenamePreset = 'default';
-        customFilenamePattern = '';
     }
     
     function handlePaste(event: ClipboardEvent) {
