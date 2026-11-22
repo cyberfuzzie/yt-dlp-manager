@@ -30,5 +30,7 @@ val instantSerializer: KSerializer<Instant> = object : KSerializer<Instant> {
 fun appJson(): Json = Json {
     prettyPrint = true
     ignoreUnknownKeys = true
+    // Default values (e.g. PENDING status) must be sent so clients can bucket updates.
+    encodeDefaults = true
     serializersModule = SerializersModule { contextual(Instant::class, instantSerializer) }
 }
