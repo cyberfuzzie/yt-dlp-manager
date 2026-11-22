@@ -104,8 +104,9 @@ describe('DownloadItem', () => {
 		expect(screen.getByText('42.5%')).toBeInTheDocument();
 		expect(screen.getByText('⚡ 1.0MiB/s')).toBeInTheDocument();
 		expect(screen.getByText('⏱ 00:10')).toBeInTheDocument();
-		const bar = document.querySelector('.progress-bar');
-		expect(bar).toHaveStyle('width: 42.5%');
+		const fill = document.querySelector('.progress-fill');
+		expect(fill).toHaveStyle('width: 42.5%');
+		expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '42.5');
 	});
 
 	it('handles a DOWNLOADING download without a progress field', () => {
