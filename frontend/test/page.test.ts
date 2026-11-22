@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Page from '../src/routes/+page.svelte';
 import { api, createWebSocket } from '#lib/api.ts';
 import type { ConnectionStatus, WebSocketConnection } from '#lib/api.ts';
@@ -46,6 +46,8 @@ beforeEach(() => {
 	apiMock.addDownload.mockReset();
 	apiMock.cancelDownload.mockReset();
 });
+
+afterEach(() => vi.restoreAllMocks());
 
 const urlsLabel = 'Video-URLs * (eine pro Zeile)';
 
@@ -191,6 +193,108 @@ describe('page', () => {
 		errorSpy.mockRestore();
 	});
 
+	it('keeps submitted downloads when the initial load resolves late', async () => {
+		let resolveInitial!: (value: DownloadInfo[]) => void;
+		const initialLoad = new Promise<DownloadInfo[]>(resolve => { resolveInitial = resolve; });
+		apiMock.getConfig.mockResolvedValue({ baseDirectory: '' });
+		apiMock.getDownloads
+			.mockReturnValueOnce(initialLoad)
+			.mockResolvedValueOnce([makeDownload({ id: 'n1', status: 'PENDING', url: 'https://a.example' })]);
+		apiMock.addDownload.mockResolvedValue({ id: 'n1', message: 'ok' });
+
+		render(Page);
+		await waitFor(() => expect(apiMock.getDownloads).toHaveBeenCalledTimes(1));
+
+		await fireEvent.input(screen.getByLabelText(urlsLabel), { target: { value: 'https://a.example' } });
+		await fireEvent.submit(document.querySelector('form') as HTMLFormElement);
+
+		await waitFor(() => expect(screen.getByText('Downloads (1)')).toBeInTheDocument());
+		resolveInitial([]);
+		await waitFor(() => expect(createWebSocketMock).toHaveBeenCalled());
+
+		expect(screen.getByText('Downloads (1)')).toBeInTheDocument();
+		expect(screen.getByText('Wartend (1)')).toBeInTheDocument();
+	});
+
+	it('does not overwrite a socket update that arrives before the refresh resolves', async () => {
+		let resolveRefresh!: (value: DownloadInfo[]) => void;
+		const refresh = new Promise<DownloadInfo[]>(resolve => { resolveRefresh = resolve; });
+		apiMock.getConfig.mockResolvedValue({ baseDirectory: '' });
+		apiMock.getDownloads
+			.mockResolvedValueOnce([])
+			.mockReturnValueOnce(refresh);
+		apiMock.addDownload
+			.mockResolvedValueOnce({ id: 'n1', message: 'ok' })
+			.mockResolvedValueOnce({ id: 'n2', message: 'ok' });
+
+		render(Page);
+		await waitFor(() => expect(createWebSocketMock).toHaveBeenCalled());
+
+		await fireEvent.input(screen.getByLabelText(urlsLabel), {
+			target: { value: 'https://a.example\nhttps://b.example' },
+		});
+		await fireEvent.submit(document.querySelector('form') as HTMLFormElement);
+		await waitFor(() => expect(apiMock.getDownloads).toHaveBeenCalledTimes(2));
+
+		onDownloadMessage?.(makeDownload({ id: 'n1', status: 'DOWNLOADING', progress: 40 }));
+		await waitFor(() => expect(screen.getByText('40.0%')).toBeInTheDocument());
+
+		// The stale REST copy of n1 must not replace the socket update, while n2 is added.
+		resolveRefresh([
+			makeDownload({ id: 'n1', status: 'PENDING', url: 'https://a.example' }),
+			makeDownload({ id: 'n2', status: 'PENDING', url: 'https://b.example' }),
+		]);
+		await waitFor(() => expect(screen.getByText('b.example')).toBeInTheDocument());
+
+		expect(screen.getByText('Downloads (2)')).toBeInTheDocument();
+		expect(screen.getByText('example.com')).toBeInTheDocument();
+		expect(screen.queryByText('a.example')).not.toBeInTheDocument();
+		expect(screen.getByText('40.0%')).toBeInTheDocument();
+	});
+
+	it('shows successful submissions when another URL in the batch fails', async () => {
+		apiMock.getConfig.mockResolvedValue({ baseDirectory: '' });
+		apiMock.getDownloads
+			.mockResolvedValueOnce([])
+			.mockResolvedValueOnce([makeDownload({ id: 'ok-1', status: 'PENDING', url: 'https://a.example' })]);
+		apiMock.addDownload
+			.mockResolvedValueOnce({ id: 'ok-1', message: 'ok' })
+			.mockRejectedValueOnce(new Error('bad url'));
+		const alertMock = vi.spyOn(window, 'alert').mockImplementation(() => {});
+
+		render(Page);
+		await waitFor(() => expect(createWebSocketMock).toHaveBeenCalled());
+
+		await fireEvent.input(screen.getByLabelText(urlsLabel), {
+			target: { value: 'https://a.example\nhttps://b.example' },
+		});
+		await fireEvent.submit(document.querySelector('form') as HTMLFormElement);
+
+		await waitFor(() => expect(screen.getByText('Downloads (1)')).toBeInTheDocument());
+		expect(screen.getByText('Wartend (1)')).toBeInTheDocument();
+		expect(alertMock).toHaveBeenCalledWith('Fehler beim Hinzufügen: bad url');
+	});
+
+	it('ignores unrelated downloads returned by the refresh request', async () => {
+		apiMock.getConfig.mockResolvedValue({ baseDirectory: '' });
+		apiMock.getDownloads
+			.mockResolvedValueOnce([])
+			.mockResolvedValueOnce([
+				makeDownload({ id: 'other', status: 'PENDING', url: 'https://other.example' }),
+				makeDownload({ id: 'n1', status: 'PENDING', url: 'https://a.example' }),
+			]);
+		apiMock.addDownload.mockResolvedValue({ id: 'n1', message: 'ok' });
+
+		render(Page);
+		await waitFor(() => expect(createWebSocketMock).toHaveBeenCalled());
+
+		await fireEvent.input(screen.getByLabelText(urlsLabel), { target: { value: 'https://a.example' } });
+		await fireEvent.submit(document.querySelector('form') as HTMLFormElement);
+
+		await waitFor(() => expect(screen.getByText('Downloads (1)')).toBeInTheDocument());
+		expect(screen.queryByText('other.example')).not.toBeInTheDocument();
+	});
+
 	it('alerts when adding downloads fails', async () => {
 		apiMock.getConfig.mockResolvedValue({ baseDirectory: '' });
 		apiMock.getDownloads.mockResolvedValue([]);
@@ -203,6 +307,7 @@ describe('page', () => {
 		await fireEvent.input(screen.getByLabelText(urlsLabel), { target: { value: 'https://a.example' } });
 		await fireEvent.submit(document.querySelector('form') as HTMLFormElement);
 		await waitFor(() => expect(alertMock).toHaveBeenCalledWith('Fehler beim Hinzufügen: boom'));
+		expect(apiMock.getDownloads).toHaveBeenCalledTimes(1);
 		alertMock.mockRestore();
 	});
 
